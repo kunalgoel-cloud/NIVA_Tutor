@@ -12,7 +12,9 @@ const INTERESTS = ["animals", "dinosaur", "fruit", "toys", "story", "shapes", "w
 const box = "flex min-h-11 items-center gap-3 font-semibold";
 
 export default function SettingsPage() {
-  const { settings, saveSettings, profile, updateProfile, say, voices } = useApp();
+  const { settings, saveSettings, profile, updateProfile, say, voices, resetGames, playedIds, visibleActivities } = useApp();
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
   const [saved, setSaved] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const speechKey = useSyncExternalStore(() => () => {}, () => { const d = detectSpeech(); return `${+d.synthesis}${+d.recognition}`; }, () => "");
@@ -50,6 +52,25 @@ export default function SettingsPage() {
         <label className="mt-2 flex max-w-xs flex-col gap-1 font-semibold">Gentle break reminder
           <select value={settings.session.gentleBreakReminderMinutes ?? ""} onChange={(e) => void update({ ...settings, session: { ...settings.session, gentleBreakReminderMinutes: e.target.value ? Number(e.target.value) : null } })} className="min-h-11 rounded-lg border-2 border-line bg-white px-2">
             <option value="">Off</option>{[10, 15, 20, 30].map((n) => <option key={n} value={n}>After {n} minutes of one game</option>)}</select></label>
+      </Section>
+
+      <Section title="Games" id="games" hint="Keep every game fresh: a finished game is not offered again until you reset.">
+        <label className={box}><input type="checkbox" className="size-5" checked={settings.session.neverRepeat} onChange={(e) => void update({ ...settings, session: { ...settings.session, neverRepeat: e.target.checked } })} /> Don&apos;t repeat games (finished games disappear until reset)</label>
+        {profile ? (
+          <div className="mt-2 flex flex-col items-start gap-2">
+            <p className="text-sm text-ink-soft">{profile.nickname} has finished {playedIds.size} of {visibleActivities.length} games. Resetting makes every game new again. Progress, history and the learning picture are kept.</p>
+            {!confirmReset ? (
+              <PBtn onClick={() => { setConfirmReset(true); setResetDone(false); }}>🔄 Reset all games</PBtn>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Confirm reset">
+                <span className="font-semibold">Make all games new again for {profile.nickname}?</span>
+                <PBtn tone="primary" onClick={async () => { await resetGames(); setConfirmReset(false); setResetDone(true); }}>Yes, reset all games</PBtn>
+                <PBtn onClick={() => setConfirmReset(false)}>Cancel</PBtn>
+              </div>
+            )}
+            <p role="status" aria-live="polite" className="font-semibold text-good">{resetDone ? "✓ All games are new again." : ""}</p>
+          </div>
+        ) : <p className="mt-2 text-sm text-ink-soft">Choose a child profile first.</p>}
       </Section>
 
       <Section title="Audio" id="audio">

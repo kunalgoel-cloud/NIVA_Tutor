@@ -5,6 +5,8 @@ export const ParentSettingsSchema = z.object({
   session: z.object({
     adventureLength: z.number().int().min(2).max(5).default(4), // activities in Today's Adventure
     showDurations: z.boolean().default(true),
+    neverRepeat: z.boolean().default(true), // a finished game is not offered again until a grown-up resets games
+    gamesResetAt: z.record(z.string(), z.string()).default({}), // child profile id -> when games were last reset
     gentleBreakReminderMinutes: z.number().int().min(5).max(60).nullable().default(null), // a kind "time for a stretch?" note; never blocks play
   }).prefault({}),
   audio: z.object({

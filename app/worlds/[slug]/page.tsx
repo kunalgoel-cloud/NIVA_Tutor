@@ -19,12 +19,14 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 }
 
 function WorldInner({ slug }: { slug: string }) {
-  const { visibleActivities, profile, attempts, settings, recommendations } = useApp();
+  const { visibleActivities, freshActivities, profile, playedIds, settings, recommendations } = useApp();
   const world = worldBySlug(slug)!;
   const character = characterById(world.characterId);
   const band = ageBandIndex(profile?.ageBand ?? "little-explorer");
-  const list = visibleActivities.filter((a) => a.world === slug && ageBandIndex(a.ageBand) <= band);
-  const played = new Set(attempts.map((a) => a.activityId));
+  const inWorld = (a: { world: string; ageBand: Parameters<typeof ageBandIndex>[0] }) => a.world === slug && ageBandIndex(a.ageBand) <= band;
+  const list = freshActivities.filter(inWorld);
+  const allPlayed = list.length === 0 && visibleActivities.some(inWorld);
+  const played = playedIds;
   const top = recommendations().find((r) => r.activity.world === slug)?.activity.id;
   const sorted = [...list].sort((a, b) => (a.id === top ? -1 : b.id === top ? 1 : a.title.localeCompare(b.title)));
 
@@ -35,7 +37,14 @@ function WorldInner({ slug }: { slug: string }) {
           <Character species={character.species} size={110} mood="cheer" label={character.name} />
           <p className="text-xl font-bold text-[var(--w-fg)]">{world.description}</p>
         </div>
-        {sorted.length === 0 ? (
+        {allPlayed ? (
+          <div className="flex flex-col items-center gap-3 rounded-card bg-white p-8 text-center shadow-clay" data-testid="world-complete">
+            <p className="text-5xl" aria-hidden>🎉</p>
+            <p className="text-xl font-bold">You played every game here! Amazing!</p>
+            <p className="text-ink-soft">Try another world, or ask a grown-up for new games.</p>
+            <BigButton href="/worlds">Back to the worlds</BigButton>
+          </div>
+        ) : sorted.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-card bg-white p-8 text-center shadow-clay" data-testid="empty-world">
             <p className="text-5xl" aria-hidden>🌱</p>
             <p className="text-xl font-bold">New games are growing here soon!</p>

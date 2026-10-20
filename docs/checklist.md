@@ -4,7 +4,7 @@ Legend: ✅ implemented & tested · 🟡 implemented, not fully tested · 🔶 p
 
 ## Release 1 (this version)
 - ✅ Next.js app, design system, 5 worlds, navigation, all 16 required screens (welcome, parent setup, profile select, world home, world overview/activity selection, game, conversation, completion, Today's Adventure, parent dashboard, progress, library, settings, export/delete, error/offline/not-found)
-- ✅ 5 engines; 58 original activities (8 domains); Zod validation; calm failure screens
+- ✅ 5 engines; 91 original activities (8 domains); Zod validation; calm failure screens
 - ✅ Hints (4 levels), feedback, pause/skip/stop, evidence recording
 - ✅ Evidence categories; deterministic recommendations with reasons; Today's Adventure; offline missions kept separate
 - ✅ Content validation script + publication lifecycle (draft → validated → published → retired)
