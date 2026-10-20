@@ -1,0 +1,245 @@
+import type { AgeBand, DomainSlug, Objective, PublicationStatus } from "@/lib/curriculum/schema";
+
+type M = [framework: string, reference: string, type?: "aligns" | "partial" | "informs"];
+type Spec = {
+  id: string; d: DomainSlug; sub: string; title: string; desc: string; band?: AgeBand;
+  pre?: string[]; prior: string; ex: string[]; types: string[]; ok: string[]; diff: string[]; hints: string[];
+  next?: string[]; maps: M[]; parent: string; offline?: string; status?: PublicationStatus;
+};
+
+const o = (s: Spec): Objective => ({
+  id: s.id, domain: s.d, subdomain: s.sub, title: s.title, description: s.desc, ageBand: s.band ?? "little-explorer",
+  prerequisites: s.pre ?? [], priorKnowledge: s.prior, examples: s.ex, activityTypes: s.types, successCriteria: s.ok,
+  commonDifficulties: s.diff, hints: s.hints, nextSteps: s.next ?? [],
+  frameworkMappings: s.maps.map(([frameworkId, reference, mappingType]) => ({ frameworkId, reference, mappingType: mappingType ?? "aligns" })),
+  parentExplanation: s.parent, offlineIdea: s.offline, status: s.status ?? "published",
+});
+
+const EYFS_MATH: M = ["eyfs", "Mathematics (number, numerical patterns)"];
+const ELOF_COG: M = ["elof", "Cognition: mathematics development", "partial"];
+const NCF_COG: M = ["ncf-fs", "Cognitive development (early numeracy)"];
+const MONT: M = ["montessori", "Mathematics: concrete to abstract", "informs"];
+const EYFS_CL: M = ["eyfs", "Communication and language"];
+const NCF_LANG: M = ["ncf-fs", "Language and literacy"];
+const ELOF_LANG: M = ["elof", "Language and literacy", "partial"];
+const EYFS_PSED: M = ["eyfs", "Personal, social and emotional development"];
+const NCF_SOC: M = ["ncf-fs", "Socio-emotional and ethical development"];
+const ELOF_SE: M = ["elof", "Social and emotional development", "partial"];
+const EYFS_UW: M = ["eyfs", "Understanding the world"];
+const NEL_DISC: M = ["nel", "Discovery of the world", "partial"];
+const NCF_COGSCI: M = ["ncf-fs", "Cognitive development (exploring the world)"];
+const EYFS_EAD: M = ["eyfs", "Expressive arts and design"];
+const REGGIO: M = ["reggio", "Many languages of expression", "informs"];
+const NEL_AES: M = ["nel", "Aesthetics and creative expression", "partial"];
+const NCF_AES: M = ["ncf-fs", "Aesthetic and cultural development"];
+
+export const OBJECTIVES: Objective[] = [
+  // ---------------- Mathematics ----------------
+  o({ id: "MATH-CNT-01", d: "mathematics", sub: "Counting", title: "Count up to 3 objects", desc: "Touch each object once while saying number words 1, 2, 3.",
+    prior: "Hears number words in songs and play.", ex: ["Count 3 apples on a plate", "Count 2 shoes"], types: ["count-collect", "tap-choose"],
+    ok: ["Touches each item once", "Says number words in order", "Knows the last word tells how many"], diff: ["Counts the same item twice", "Skips items", "Recites numbers without touching"],
+    hints: ["Touch each one as you count.", "Start at one end so you don't miss any."], next: ["MATH-CNT-02"], maps: [EYFS_MATH, NCF_COG, ELOF_COG, MONT],
+    parent: "Counting small groups by touching each object builds one-to-one correspondence, the foundation of all number work.", offline: "Count the spoons as you lay the table." }),
+  o({ id: "MATH-CNT-02", d: "mathematics", sub: "Counting", title: "Count up to 5 and say how many", desc: "Count up to five objects and understand the last number says the total.",
+    pre: ["MATH-CNT-01"], prior: "Counts to 3 reliably.", ex: ["Count 5 ducks", "Count 4 balloons"], types: ["count-collect"],
+    ok: ["Counts accurately to 5", "Answers 'how many?' with the last number counted"], diff: ["Counts again when asked 'how many?'", "Loses place in a scattered group"],
+    hints: ["Say the numbers slowly as you touch.", "The last number you say is how many there are."], next: ["MATH-CNT-03", "MATH-ADD-01"], maps: [EYFS_MATH, NCF_COG, ELOF_COG, MONT],
+    parent: "Understanding that the last number counted tells 'how many' (cardinality) is a key milestone, more important than reciting to 100.", offline: "Count 5 grapes together, then eat the last one!" }),
+  o({ id: "MATH-CNT-03", d: "mathematics", sub: "Counting", title: "Count up to 10", desc: "Count up to ten objects in a scattered group without missing any.",
+    pre: ["MATH-CNT-02"], prior: "Counts to 5 reliably.", ex: ["Count 8 animals in a field"], types: ["count-collect"],
+    ok: ["Counts accurately to 10", "Uses a system (moving along, tapping each)"], diff: ["Double counting in larger groups", "Number-name sequence slips around 7–9"],
+    hints: ["Count from left to right.", "Tap each one so you know it is counted."], next: ["MATH-NUM-02"], maps: [EYFS_MATH, NCF_COG, ELOF_COG],
+    parent: "Counting larger groups needs a strategy for keeping track. Notice whether your child moves objects or points systematically.", offline: "Count the stairs as you climb." }),
+  o({ id: "MATH-NUM-01", d: "mathematics", sub: "Number recognition", title: "Recognise numerals 1–5 and match to quantity", desc: "Link the written numeral to a quantity of objects.",
+    pre: ["MATH-CNT-01"], prior: "Counts to 3.", ex: ["Match numeral 4 to four dots"], types: ["match-pair"],
+    ok: ["Matches numerals 1–5 to the right quantity"], diff: ["Confuses 6/9 later; at this stage 2/5 or 1/7"],
+    hints: ["Count the dots, then look for that number."], next: ["MATH-NUM-02"], maps: [EYFS_MATH, NCF_COG, MONT],
+    parent: "Connecting the symbol to a quantity is the bridge from concrete counting to abstract number.", offline: "Spot numbers on doors, buses and clocks." }),
+  o({ id: "MATH-NUM-02", d: "mathematics", sub: "Number recognition", title: "Know the order of numbers 1–10", desc: "Put numbers in order and find a missing number in a sequence.",
+    pre: ["MATH-NUM-01", "MATH-CNT-02"], prior: "Recognises numerals to 5.", ex: ["Order 1–5 on a train", "Find the missing number in 1, 2, _, 4"], types: ["complete-pattern", "match-pair"],
+    ok: ["Orders numerals 1–5", "Fills a one-number gap"], diff: ["Swaps neighbouring numbers"], hints: ["What number comes after 2?", "Count from 1 and see where it stops."],
+    next: ["MATH-ADD-01"], maps: [EYFS_MATH, NCF_COG, ELOF_COG], parent: "Number order is the early number line; it later supports adding and subtracting.", offline: "Hop along numbers drawn in chalk." }),
+  o({ id: "MATH-CMP-01", d: "mathematics", sub: "Comparing", title: "Compare groups: more, fewer, the same", desc: "Say which of two groups has more or fewer without needing exact counts.",
+    pre: ["MATH-CNT-01"], prior: "Knows 'more' from daily life.", ex: ["Which plate has more biscuits?"], types: ["tap-choose"],
+    ok: ["Chooses the larger group", "Chooses the smaller group when asked"], diff: ["Judges by space taken rather than number", "Mixes up more and fewer"],
+    hints: ["Line them up side by side.", "Count each group and compare."], next: ["MATH-SUB-02"], maps: [EYFS_MATH, NCF_COG, ELOF_COG], parent: "Comparing groups builds 'number sense'. Spread-out groups look bigger, which is a classic puzzle at this age.", offline: "Share biscuits and ask 'who has more?'" }),
+  o({ id: "MATH-SUB-01", d: "mathematics", sub: "Counting", title: "Give me exactly N", desc: "Hand over a requested number of objects and stop at the right number.",
+    pre: ["MATH-CNT-02"], prior: "Counts to 5.", ex: ["Give the dinosaur 3 apples"], types: ["count-collect"],
+    ok: ["Stops at the requested number", "Corrects if too many"], diff: ["Keeps going past the number", "Counts the objects already given"],
+    hints: ["Count out loud as you give.", "Stop when you say the number you need."], next: ["MATH-ADD-01"], maps: [EYFS_MATH, NCF_COG, ELOF_COG, MONT],
+    parent: "'Give me 3' tests that your child can use counting to build a quantity, harder than counting what is already there.", offline: "Ask for 'two socks' or 'four blocks'." }),
+  o({ id: "MATH-SUB-02", d: "mathematics", sub: "Early arithmetic", title: "Taking one away leaves fewer", desc: "See that when one object goes away, fewer are left.",
+    pre: ["MATH-CNT-02", "MATH-CMP-01"], prior: "Compares groups.", ex: ["3 ducks, 1 swims away: 2 are left"], types: ["tap-choose"],
+    ok: ["Chooses the group that shows what is left"], diff: ["Forgets the starting number"], hints: ["How many were there at first?", "One went away, so there is one fewer."],
+    next: ["MATH-ADD-01"], maps: [EYFS_MATH, ELOF_COG, MONT], parent: "Concrete take-away with pictures prepares for subtraction without any written sums.", offline: "Eat one grape from a bunch, how many now?" }),
+  o({ id: "MATH-SRT-01", d: "mathematics", sub: "Sorting", title: "Sort by one feature (size or colour)", desc: "Put things into groups by one clear property.",
+    prior: "Knows big and small.", ex: ["Big and small teddies in two baskets"], types: ["match-pair"],
+    ok: ["Sorts items correctly into two groups by size or colour"], diff: ["Changes the sorting rule midway"], hints: ["Look at just the size.", "Is this one big or small?"],
+    next: ["LOG-CLS-01"], maps: [EYFS_MATH, ELOF_COG, MONT], parent: "Sorting by a single rule is the start of classification and data handling.", offline: "Sort the laundry by size or colour." }),
+  o({ id: "MATH-SHP-01", d: "mathematics", sub: "Shape", title: "Spot circles, squares and triangles", desc: "Recognise basic 2D shapes in pictures and everyday things.",
+    prior: "Plays with blocks.", ex: ["A clock is a circle"], types: ["tap-choose"],
+    ok: ["Chooses the named shape among distractors"], diff: ["Calls any pointy shape a triangle"], hints: ["Count the sides.", "Does it have corners?"],
+    next: ["LOG-SPA-01"], maps: [EYFS_MATH, NCF_COG, MONT], parent: "Naming shapes in the real world links maths to your child's surroundings.", offline: "Go on a shape hunt around the house." }),
+  o({ id: "MATH-PAT-01", d: "mathematics", sub: "Patterns", title: "Continue a repeating pattern", desc: "Notice what repeats and say what comes next in an AB pattern.",
+    prior: "Matches colours.", ex: ["Red, blue, red, blue, ?"], types: ["complete-pattern"],
+    ok: ["Chooses the correct next item in an AB pattern"], diff: ["Picks a favourite colour regardless of pattern"], hints: ["Say the colours out loud.", "What came after red before?"],
+    next: ["LOG-PAT-01"], maps: [EYFS_MATH, NCF_COG, ELOF_COG], parent: "Patterns are the root of algebraic thinking.", offline: "Thread beads in a repeating pattern." }),
+  o({ id: "MATH-ADD-01", d: "mathematics", sub: "Early arithmetic", title: "Add within 5 using objects", desc: "Combine two small groups and say the total.", band: "curious-thinker",
+    pre: ["MATH-CNT-02", "MATH-SUB-01"], prior: "Counts to 5 reliably.", ex: ["2 apples and 1 apple make 3"], types: ["count-collect"],
+    ok: ["Combines groups and states the total"], diff: ["Counts only one group"], hints: ["Count them all together."], next: ["MATH-BND-01"],
+    maps: [EYFS_MATH, ELOF_COG], parent: "Planned: concrete addition stories.", status: "draft" }),
+  o({ id: "MATH-BND-01", d: "mathematics", sub: "Number bonds", title: "Number bonds to 5", desc: "Know pairs of numbers that make 5.", band: "curious-thinker",
+    pre: ["MATH-ADD-01"], prior: "Adds within 5.", ex: ["2 and 3 make 5"], types: ["tap-choose"], ok: ["States complementary pairs to 5"], diff: ["Guessing"], hints: ["Use fingers."],
+    next: [], maps: [EYFS_MATH, ELOF_COG], parent: "Planned: bonds are the basis of mental arithmetic.", status: "draft" }),
+  o({ id: "MATH-EST-01", d: "mathematics", sub: "Estimation", title: "Estimate 'about how many'", desc: "Make a sensible guess about a group before counting.", band: "curious-thinker",
+    pre: ["MATH-CNT-03"], prior: "Counts to 10.", ex: ["About how many sweets?"], types: ["tap-choose"], ok: ["Estimates within a sensible range"], diff: ["Wild guesses"], hints: ["Think of a small group you know."],
+    next: [], maps: [EYFS_MATH], parent: "Planned: estimation builds number sense.", status: "draft" }),
+  o({ id: "MATH-PLV-01", d: "mathematics", sub: "Place value", title: "Tens and ones to 20", desc: "Understand a number as groups of ten and some ones.", band: "confident-learner",
+    pre: ["MATH-CNT-03"], prior: "Counts to 20.", ex: ["13 is one ten and three ones"], types: ["count-collect"], ok: ["Builds teen numbers from ten and ones"], diff: ["Reversing digits"], hints: ["Make a group of ten first."],
+    next: [], maps: [EYFS_MATH], parent: "Planned for the Confident Learner band.", status: "draft" }),
+  o({ id: "MATH-WRD-01", d: "mathematics", sub: "Word problems", title: "Solve simple one-step word stories", desc: "Use a story to decide whether to add or take away.", band: "young-problem-solver",
+    pre: ["MATH-ADD-01"], prior: "Adds and subtracts within 10.", ex: ["Sam had 4 stickers and got 3 more"], types: ["listen-respond"], ok: ["Chooses the right operation and answers"], diff: ["Choosing the wrong operation"],
+    hints: ["Draw it."], next: [], maps: [EYFS_MATH], parent: "Planned for the Young Problem Solver band.", status: "draft" }),
+
+  // ---------------- Spoken English ----------------
+  o({ id: "SPE-VOC-01", d: "spoken-english", sub: "Vocabulary", title: "Name everyday things", desc: "Say or point to the names of common objects, animals and foods.",
+    prior: "Uses single words.", ex: ["Tap the banana"], types: ["tap-choose"], ok: ["Links spoken word to the right picture"], diff: ["Similar-looking items"], hints: ["Say the word slowly."],
+    next: ["SPE-VOC-02"], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "A wide vocabulary is one of the strongest early predictors of later reading comprehension. Talk about new words!", offline: "Name five things you can see on a walk." }),
+  o({ id: "SPE-VOC-02", d: "spoken-english", sub: "Vocabulary", title: "Use describing words", desc: "Use adjectives such as big, soft, sweet, fast to describe things.",
+    pre: ["SPE-VOC-01"], prior: "Names things.", ex: ["A soft teddy"], types: ["listen-respond"], ok: ["Uses at least one describing word"], diff: ["Only names, doesn't describe"],
+    hints: ["How does it feel? How does it look?"], next: ["SPE-SNT-01"], maps: [EYFS_CL, NCF_LANG], parent: "Describing words make speech richer. Model them in everyday talk.", offline: "Describe a fruit: colour, feel, taste." }),
+  o({ id: "SPE-SNT-01", d: "spoken-english", sub: "Sentences", title: "Say a whole sentence about a picture", desc: "Describe what is in a picture in a short sentence.",
+    pre: ["SPE-VOC-01"], prior: "Names things.", ex: ["The dog is running."], types: ["listen-respond"], ok: ["Says a subject + action sentence"], diff: ["Single words only"],
+    hints: ["Who is in the picture? What are they doing?"], next: ["SPE-SNT-02", "CONV-RSN-01"], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Gently modelling a fuller sentence back works better than correcting.", offline: "Describe a picture in a book together." }),
+  o({ id: "SPE-VRB-01", d: "spoken-english", sub: "Vocabulary", title: "Use action words", desc: "Say what people and animals are doing.",
+    pre: ["SPE-VOC-01"], prior: "Names things.", ex: ["jumping, sleeping, eating"], types: ["listen-respond"], ok: ["Uses a suitable action word"], diff: ["Uses nouns only"],
+    hints: ["What are they doing with their body?"], next: ["SPE-SNT-01"], maps: [EYFS_CL, NCF_LANG], parent: "Verbs bring sentences to life.", offline: "Play charades with actions." }),
+  o({ id: "SPE-SNT-02", d: "spoken-english", sub: "Sentences", title: "Finish a sentence sensibly", desc: "Pick or say the word that makes a sentence make sense.",
+    pre: ["SPE-VOC-01"], prior: "Understands short sentences.", ex: ["A fish can ___ (swim)"], types: ["tap-choose"], ok: ["Selects a word that fits meaning and grammar"], diff: ["Picks by picture only"],
+    hints: ["Say the whole sentence."], next: ["CONV-RSN-01"], maps: [EYFS_CL, NCF_LANG], parent: "Completing sentences builds grammar and meaning together.", offline: "Pause before the last word of a familiar rhyme." }),
+  o({ id: "SPE-LIS-01", d: "spoken-english", sub: "Listening", title: "Listen and respond to a request or question", desc: "Listen to a short spoken instruction and respond.",
+    prior: "Follows simple instructions.", ex: ["Tap the red ball"], types: ["listen-respond", "tap-choose"], ok: ["Responds to the spoken request"], diff: ["Distracted"], hints: ["Press the ear to hear it again."],
+    next: [], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Active listening comes before speaking well.", offline: "Give two-step instructions: 'Get your shoes and bring the bag'." }),
+
+  // ---------------- Conversation ----------------
+  o({ id: "CONV-RSP-01", d: "conversation", sub: "Responding", title: "Respond to a question on topic", desc: "Answer a question with something relevant.",
+    prior: "Speaks in short sentences.", ex: ["'What is your favourite fruit?' 'Mango.'"], types: ["listen-respond"], ok: ["Gives a relevant answer"], diff: ["Off-topic answers", "Silence"],
+    hints: ["You can tap a picture or tell me in your own words."], next: ["CONV-OPN-01", "CONV-TRN-01"], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "There are no wrong answers here, just practice answering and being heard.", offline: "Ask open questions at mealtimes." }),
+  o({ id: "CONV-OPN-01", d: "conversation", sub: "Opinions", title: "Say what you like and why", desc: "Express a preference and add a describing word or reason.",
+    pre: ["CONV-RSP-01"], prior: "Names favourites.", ex: ["I like mangoes because they are sweet."], types: ["listen-respond"], ok: ["States a preference", "Adds a detail"], diff: ["One-word answers"],
+    hints: ["Tell me what you like about it."], next: ["CONV-RSN-01"], maps: [EYFS_CL, NCF_LANG], parent: "Preferences are a safe, motivating way to practise longer answers.", offline: "Ask 'what was your favourite part?' after outings." }),
+  o({ id: "CONV-TRN-01", d: "conversation", sub: "Turn-taking", title: "Take turns and ask back", desc: "Listen, answer, then ask the other person a question.",
+    pre: ["CONV-RSP-01"], prior: "Answers questions.", ex: ["'I'm Sam. What's your name?'"], types: ["listen-respond"], ok: ["Replies and asks something back"], diff: ["Waits to be asked"],
+    hints: ["Now you can ask me something."], next: ["CONV-QST-01"], maps: [EYFS_CL, EYFS_PSED, ELOF_SE], parent: "Two-way conversation is a foundation for friendships.", offline: "Play a question ping-pong game." }),
+  o({ id: "CONV-QST-01", d: "conversation", sub: "Questions", title: "Ask a question", desc: "Ask who, what, why or where questions out of curiosity.",
+    pre: ["CONV-TRN-01"], prior: "Answers questions.", ex: ["'Why is the moon out?'"], types: ["listen-respond"], ok: ["Asks a relevant question"], diff: ["Statements instead of questions"],
+    hints: ["What would you like to know?"], next: ["CONV-RSN-01"], maps: [EYFS_CL, NCF_COGSCI], parent: "Curiosity is the engine of learning; celebrate every 'why?'.", offline: "Think of three questions to ask grandparents." }),
+  o({ id: "CONV-RSN-01", d: "conversation", sub: "Reasoning", title: "Give a simple reason with 'because'", desc: "Explain a choice or a fact using because.",
+    pre: ["CONV-OPN-01"], prior: "States preferences.", ex: ["I wear a coat because it is cold."], types: ["listen-respond"], ok: ["Gives a reason, in any form"], diff: ["Repeats the answer instead of explaining"],
+    hints: ["Why do you think so?"], next: [], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Explaining 'why' is the start of reasoning. Accept any sensible reason.", offline: "Ask 'why do you think that?' about everyday things." }),
+  o({ id: "CONV-NAR-01", d: "conversation", sub: "Narrating", title: "Tell about something that happened", desc: "Talk about an event or part of the day in order.",
+    pre: ["CONV-RSP-01"], prior: "Answers questions.", ex: ["First we went to the park, then we had a snack."], types: ["listen-respond"], ok: ["Describes at least one event"], diff: ["Mixes up order"],
+    hints: ["What did you do first?"], next: ["LIT-NAR-01"], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Narrating events builds the language of stories. We do not keep what your child says.", offline: "Chat about the day at bedtime." }),
+  o({ id: "CONV-NAR-02", d: "conversation", sub: "Narrating", title: "Say what might happen next", desc: "Predict an outcome and talk about it.",
+    pre: ["CONV-RSP-01"], prior: "Answers questions.", ex: ["The balloon might float away."], types: ["listen-respond"], ok: ["Offers a sensible prediction"], diff: ["Says 'I don't know'"],
+    hints: ["What do you think will happen?"], next: [], maps: [EYFS_CL, NCF_LANG], parent: "Predicting links language with thinking ahead.", offline: "Pause a story and ask 'what next?'" }),
+
+  // ---------------- Logic & puzzles ----------------
+  o({ id: "LOG-MTC-01", d: "logic-puzzles", sub: "Matching", title: "Match things that go together", desc: "Match identical or related pictures.",
+    prior: "Matches colours.", ex: ["Shoe and sock"], types: ["match-pair"], ok: ["Matches pairs"], diff: ["Rushing"], hints: ["Look at one picture. What goes with it?"],
+    next: ["LOG-ODD-01"], maps: [EYFS_MATH, ELOF_COG, MONT], parent: "Matching strengthens visual discrimination.", offline: "Match socks from the laundry." }),
+  o({ id: "LOG-ODD-01", d: "logic-puzzles", sub: "Classification", title: "Spot the odd one out", desc: "Find the item that doesn't belong and know why.",
+    pre: ["LOG-MTC-01"], prior: "Sorts by one feature.", ex: ["Three fruits and a car"], types: ["tap-choose"], ok: ["Picks the different item"], diff: ["Picks by colour only"],
+    hints: ["What do most of them have in common?"], next: ["LOG-CLS-01"], maps: [EYFS_MATH, ELOF_COG], parent: "Odd-one-out puzzles need flexible thinking about categories.", offline: "Play 'which one is different?' with toys." }),
+  o({ id: "LOG-CLS-01", d: "logic-puzzles", sub: "Classification", title: "Sort into groups by category", desc: "Sort things by what they are (e.g. land and water animals).",
+    pre: ["MATH-SRT-01"], prior: "Sorts by size or colour.", ex: ["Fish go in water"], types: ["match-pair"], ok: ["Sorts by category"], diff: ["Switching rule"],
+    hints: ["Where does this one live?"], next: [], maps: [EYFS_UW, ELOF_COG], parent: "Categorising is how we organise knowledge.", offline: "Sort toys into categories." }),
+  o({ id: "LOG-MEM-01", d: "logic-puzzles", sub: "Memory", title: "Notice what has changed or is missing", desc: "Remember a small set of objects and spot a missing one.",
+    prior: "Names objects.", ex: ["Which toy is missing?"], types: ["tap-choose"], ok: ["Identifies the missing item"], diff: ["Forgets quickly"],
+    hints: ["Say the names to help you remember."], next: [], maps: [ELOF_COG, EYFS_UW], parent: "Visual memory grows with practice and naming items aloud.", offline: "Hide one toy from a row of four." }),
+  o({ id: "LOG-SEQ-01", d: "logic-puzzles", sub: "Sequencing", title: "Put events in order", desc: "Order what happens first, next and last.",
+    prior: "Knows daily routines.", ex: ["Wake up, brush teeth, eat breakfast"], types: ["complete-pattern"], ok: ["Orders 3–4 steps"], diff: ["Swaps middle steps"],
+    hints: ["What happens first?"], next: ["LIT-NAR-01"], maps: [EYFS_CL, EYFS_MATH, ELOF_COG], parent: "Sequencing underlies stories, routines and instructions.", offline: "Talk through the steps of making toast." }),
+  o({ id: "LOG-PAT-01", d: "logic-puzzles", sub: "Patterns", title: "Continue a longer pattern", desc: "Continue AAB and ABC patterns.",
+    pre: ["MATH-PAT-01"], prior: "Continues AB patterns.", ex: ["Star, star, moon, star, star, ?"], types: ["complete-pattern"], ok: ["Continues the pattern"], diff: ["Treats it as AB"],
+    hints: ["Say the pattern out loud from the start."], next: [], maps: [EYFS_MATH, ELOF_COG], parent: "More complex patterns stretch working memory.", offline: "Make clapping patterns." }),
+  o({ id: "LOG-SPA-01", d: "logic-puzzles", sub: "Spatial reasoning", title: "Use position and shape to solve a puzzle", desc: "Match shadows and follow a simple route.",
+    pre: ["MATH-SHP-01"], prior: "Knows shapes.", ex: ["Match an animal to its shadow"], types: ["match-pair", "tap-choose"], ok: ["Matches shapes to outlines", "Chooses a path that reaches the goal"],
+    diff: ["Mirrored shapes"], hints: ["Look at the outline."], next: [], maps: [EYFS_MATH, ELOF_COG, MONT], parent: "Spatial skills predict later STEM success; puzzles and blocks are ideal.", offline: "Make shadows with a torch." }),
+  o({ id: "LOG-CAU-01", d: "logic-puzzles", sub: "Cause and effect", title: "Say what happens when...", desc: "Link an action to its effect.",
+    prior: "Everyday experiences.", ex: ["Sun melts ice cream"], types: ["tap-choose"], ok: ["Chooses the likely result"], diff: ["Unfamiliar situations"], hints: ["What happened the last time?"],
+    next: [], maps: [EYFS_UW, NEL_DISC, ELOF_COG], parent: "Cause and effect is the root of scientific thinking.", offline: "Predict then test: does it float?" }),
+  o({ id: "LOG-RUL-01", d: "logic-puzzles", sub: "Rules", title: "Discover a hidden rule", desc: "Work out the rule that links several items.", band: "curious-thinker",
+    pre: ["LOG-ODD-01"], prior: "Odd one out.", ex: ["All these are red things"], types: ["tap-choose"], ok: ["States or applies the rule"], diff: ["Guessing"], hints: ["What is the same?"],
+    next: [], maps: [ELOF_COG], parent: "Planned.", status: "draft" }),
+
+  // ---------------- Early literacy ----------------
+  o({ id: "LIT-RHY-01", d: "early-literacy", sub: "Phonological awareness", title: "Hear words that rhyme", desc: "Pick the word that rhymes with a given word.",
+    prior: "Knows nursery rhymes.", ex: ["cat, hat"], types: ["tap-choose"], ok: ["Selects a rhyming word"], diff: ["Picks a word with the same first sound"], hints: ["Listen to the ending."],
+    next: ["LIT-PHN-01"], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Rhyme awareness is a key pre-reading skill.", offline: "Sing nursery rhymes and pause before the rhyming word." }),
+  o({ id: "LIT-PHN-01", d: "early-literacy", sub: "Phonics", title: "Hear the first sound in a word", desc: "Identify which word starts with a given sound.",
+    pre: ["LIT-RHY-01"], prior: "Hears rhymes.", ex: ["sun starts with sss"], types: ["tap-choose"], ok: ["Chooses the word with the same first sound"], diff: ["Letter names vs sounds"],
+    hints: ["Say the word slowly."], next: [], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Practise pure sounds ('sss', 'mmm'), not letter names.", offline: "I spy with my little eye, using sounds." }),
+  o({ id: "LIT-WRD-01", d: "early-literacy", sub: "Word recognition", title: "Link a spoken word to a picture", desc: "Hear a word and pick the matching picture.",
+    prior: "Names things.", ex: ["Tap the banana"], types: ["tap-choose"], ok: ["Picks the correct picture"], diff: ["Similar sounding words"], hints: ["Press the ear to listen again."],
+    next: ["LIT-PHN-01"], maps: [EYFS_CL, NCF_LANG], parent: "Builds receptive vocabulary.", offline: "Play 'point to the...' in a picture book." }),
+  o({ id: "LIT-LST-01", d: "early-literacy", sub: "Comprehension", title: "Listen to a story and remember who and what", desc: "Answer who/what questions about a short story.",
+    prior: "Enjoys stories.", ex: ["Who found the ball?"], types: ["tap-choose"], ok: ["Answers a simple question about the story"], diff: ["Details lost"], hints: ["Listen again."],
+    next: ["LIT-NAR-01"], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Comprehension begins with listening.", offline: "Ask a question after each page." }),
+  o({ id: "LIT-NAR-01", d: "early-literacy", sub: "Comprehension", title: "Retell what happened in order", desc: "Put the events of a short story in order.",
+    pre: ["LIT-LST-01"], prior: "Listens to stories.", ex: ["First, next, last"], types: ["complete-pattern"], ok: ["Orders story events"], diff: ["Mixes order"], hints: ["How did the story start?"],
+    next: [], maps: [EYFS_CL, NCF_LANG, ELOF_LANG], parent: "Retelling shows understanding.", offline: "Ask your child to retell a story to a toy." }),
+
+  // ---------------- Science & knowledge ----------------
+  o({ id: "SCI-ANI-01", d: "science-knowledge", sub: "Living things", title: "Know where animals live", desc: "Match animals to their homes and habitats.",
+    prior: "Knows common animals.", ex: ["A bird lives in a nest"], types: ["match-pair"], ok: ["Matches animals to homes"], diff: ["Pets vs wild animals"], hints: ["Where would it sleep?"],
+    next: [], maps: [EYFS_UW, NCF_COGSCI, NEL_DISC], parent: "Animal habitats introduce adaptation and environmental care.", offline: "Look for bugs and birds' homes outdoors." }),
+  o({ id: "SCI-ANI-02", d: "science-knowledge", sub: "Living things", title: "Know animal babies", desc: "Match animals to their young.",
+    prior: "Knows common animals.", ex: ["Cow and calf"], types: ["match-pair"], ok: ["Matches parent to baby"], diff: ["Unfamiliar baby names"], hints: ["Which one is the small version?"],
+    next: [], maps: [EYFS_UW, NEL_DISC], parent: "Life cycles start with simple family links.", offline: "Look at baby animals in picture books." }),
+  o({ id: "SCI-SEN-01", d: "science-knowledge", sub: "The human body", title: "Link senses to body parts", desc: "Know we see with eyes, hear with ears, smell with noses, taste with tongues and touch with hands.",
+    prior: "Names body parts.", ex: ["Ears for hearing"], types: ["match-pair"], ok: ["Matches senses to body parts"], diff: ["Confuses taste and smell"], hints: ["Which part helps you hear?"],
+    next: [], maps: [EYFS_UW, NCF_COGSCI, NEL_DISC], parent: "The five senses are how young children explore the world.", offline: "Play 'mystery bag': touch and guess.", }),
+  o({ id: "SCI-NAT-01", d: "science-knowledge", sub: "Plants", title: "Know what plants need", desc: "Know plants need water, sun and soil to grow.",
+    prior: "Has seen plants.", ex: ["Watering a plant"], types: ["tap-choose"], ok: ["Selects what a plant needs"], diff: ["Thinks plants need milk"], hints: ["What do you give plants every day?"],
+    next: [], maps: [EYFS_UW, NCF_COGSCI, NEL_DISC], parent: "Growing a plant at home makes this real.", offline: "Plant a bean in a jar and observe it each day." }),
+  o({ id: "SCI-WTH-01", d: "science-knowledge", sub: "Weather", title: "Know where rain comes from", desc: "Know rain falls from clouds.",
+    prior: "Has seen rain.", ex: ["Clouds make rain"], types: ["tap-choose"], ok: ["Chooses clouds"], diff: ["Thinks rain comes from the sky 'by itself'"], hints: ["Look up on a rainy day."],
+    next: [], maps: [EYFS_UW, NEL_DISC], parent: "Introduces the water cycle in simple terms.", offline: "Watch steam from a kettle (adult only) and talk about clouds." }),
+  o({ id: "SCI-WTH-02", d: "science-knowledge", sub: "Weather", title: "Choose clothes for the weather", desc: "Match weather to sensible clothes and activities.",
+    prior: "Knows basic weather words.", ex: ["Umbrella for rain"], types: ["tap-choose"], ok: ["Chooses sensible clothes"], diff: ["Ignores the weather"], hints: ["Is it hot or cold?"],
+    next: [], maps: [EYFS_UW, NEL_DISC], parent: "Links science to daily life and self-care.", offline: "Look out of the window and decide what to wear." }),
+  o({ id: "SCI-FLY-01", d: "science-knowledge", sub: "Everyday science", title: "Know which things can fly", desc: "Sort things that can fly from things that can't.",
+    prior: "Names animals and vehicles.", ex: ["A bird can fly, a dog cannot"], types: ["tap-choose"], ok: ["Picks the flying thing"], diff: ["Thinks all animals can fly"], hints: ["Does it have wings?"],
+    next: [], maps: [EYFS_UW, NEL_DISC], parent: "Classification by property.", offline: "Watch birds and planes together." }),
+  o({ id: "SCI-COM-01", d: "science-knowledge", sub: "Community", title: "Know community helpers", desc: "Match helpers to what they do or use.",
+    prior: "Knows common jobs.", ex: ["Doctor and stethoscope"], types: ["match-pair"], ok: ["Matches helper to tool"], diff: ["Unfamiliar jobs"], hints: ["What does this helper use?"],
+    next: [], maps: [EYFS_UW, NCF_SOC, NEL_DISC], parent: "Understanding who helps us builds trust and community awareness.", offline: "Say thank you to a helper you meet today." }),
+  o({ id: "SCI-SPC-01", d: "science-knowledge", sub: "Space", title: "Sun, moon and stars", desc: "Know what we see in the day and night sky.", band: "curious-thinker",
+    pre: [], prior: "Seen the moon.", ex: ["Moon at night"], types: ["tap-choose"], ok: ["Sorts day and night sky objects"], diff: ["None known"], hints: ["Is it dark or light?"],
+    next: [], maps: [EYFS_UW], parent: "Planned.", status: "draft" }),
+
+  // ---------------- Creativity & storytelling ----------------
+  o({ id: "CRE-STY-01", d: "creativity-storytelling", sub: "Storytelling", title: "Add your own ideas to a story", desc: "Continue a story with imaginative ideas of the child's own.",
+    prior: "Listens to stories.", ex: ["The bunny found a magic door..."], types: ["listen-respond"], ok: ["Contributes an idea (any idea)"], diff: ["Waiting to be told"], hints: ["What would you like to happen?"],
+    next: ["CRE-END-01"], maps: [EYFS_EAD, NCF_AES, REGGIO, NEL_AES], parent: "There are no right answers: any idea is welcome.", offline: "Take turns adding a sentence to a made-up story." }),
+  o({ id: "CRE-END-01", d: "creativity-storytelling", sub: "Storytelling", title: "Choose and explain a story ending", desc: "Choose an ending and say why you like it.",
+    pre: ["CRE-STY-01"], prior: "Continues stories.", ex: ["I like the ending where they share"], types: ["tap-choose"], ok: ["Chooses an ending"], diff: ["None"], hints: ["Which ending do you like?"],
+    next: [], maps: [EYFS_EAD, REGGIO], parent: "Every ending is valid; ask 'why did you choose it?'.", offline: "Ask 'what if the story ended differently?'" }),
+  o({ id: "CRE-IMG-01", d: "creativity-storytelling", sub: "Imagination", title: "Invent a character or creature", desc: "Combine ideas to invent and describe something new.",
+    prior: "Pretend play.", ex: ["A rabbit with wings"], types: ["listen-respond"], ok: ["Describes an invented creature"], diff: ["Copying a known character"], hints: ["What would it look like? What can it do?"],
+    next: [], maps: [EYFS_EAD, REGGIO, NEL_AES], parent: "Imagination is a skill that grows with use.", offline: "Draw a made-up animal together." }),
+
+  // ---------------- Social-emotional ----------------
+  o({ id: "SEL-EMO-01", d: "social-emotional", sub: "Feelings", title: "Name feelings from faces and situations", desc: "Name happy, sad, angry, scared and excited feelings.",
+    prior: "Notices faces.", ex: ["Crying means sad"], types: ["tap-choose"], ok: ["Names the feeling"], diff: ["Confuses scared and surprised"], hints: ["Look at the face."],
+    next: ["SEL-EMP-01"], maps: [EYFS_PSED, NCF_SOC, ELOF_SE], parent: "Feelings words help children manage big emotions.", offline: "Name your own feelings out loud during the day." }),
+  o({ id: "SEL-EMP-01", d: "social-emotional", sub: "Empathy", title: "Respond kindly to someone who needs help", desc: "Think of kind and safe ways to help.",
+    pre: ["SEL-EMO-01"], prior: "Names feelings.", ex: ["Help a lost animal by asking a grown-up"], types: ["tap-choose"], ok: ["Chooses a kind and safe action"], diff: ["Ignoring"], hints: ["How would they feel?"],
+    next: ["SEL-PRB-01"], maps: [EYFS_PSED, NCF_SOC, ELOF_SE], parent: "Empathy grows when children think about others' feelings.", offline: "Talk about how a character in a book feels." }),
+  o({ id: "SEL-PRB-01", d: "social-emotional", sub: "Everyday problems", title: "Choose a kind, safe response to a problem", desc: "Use words, take turns, or ask a trusted adult for help.",
+    pre: ["SEL-EMO-01"], prior: "Names feelings.", ex: ["Ask to have a turn"], types: ["tap-choose"], ok: ["Chooses a kind or safe response"], diff: ["Hitting or grabbing as an impulse"], hints: ["What could you say?"],
+    next: [], maps: [EYFS_PSED, NCF_SOC, ELOF_SE], parent: "Practise 'use your words' and asking a trusted adult for help.", offline: "Role-play a sharing problem with soft toys." }),
+];
+
+export const objectiveById = (id: string) => OBJECTIVES.find((x) => x.id === id);
