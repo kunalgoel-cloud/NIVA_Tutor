@@ -46,6 +46,7 @@ type Ctx = {
   recommendations: (domains?: Activity["domain"][]) => Recommendation[];
   adventure: () => AdventurePlan;
   say: (text: string) => Promise<void>;
+  voices: () => { name: string; lang: string; local: boolean }[];
   stopSpeaking: () => void;
   chime: (kind: Chime) => void;
   speechSupported: boolean;
@@ -131,6 +132,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!settings.audio.speakInstructions) return Promise.resolve();
     return speaker.current?.speak(text, { volume: settings.audio.volume, muted: settings.audio.muted }) ?? Promise.resolve();
   }, [settings.audio]);
+  const voices = useCallback(() => (speaker.current?.voices() ?? []).map((v) => ({ name: v.name, lang: v.lang, local: v.localService })), []);
+  useEffect(() => { speaker.current?.setPreferred(settings.audio.voiceName); }, [settings.audio.voiceName]);
   const stopSpeaking = useCallback(() => speaker.current?.cancel(), []);
   const chime = useCallback((kind: Chime) => {
     if (settings.audio.muted || !settings.audio.soundEffects) return;
@@ -170,7 +173,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     saveSettings: (s) => run(() => repo.saveSettings(s), (d) => withSettings(d, s)),
     resetDemo: () => run(() => repo.resetDemo(), removeDemo),
     seedDemoHistory: (pid) => run(() => repo.seedDemoHistory(pid), (d) => d),
-    recommendations, adventure, say, stopSpeaking, chime, speechSupported,
+    recommendations, adventure, say, voices, stopSpeaking, chime, speechSupported,
   };
 
   return (

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { detectSpeech, getRecognitionCtor } from "@/lib/speech/capabilities";
-import { Speaker } from "@/lib/speech/synthesis";
+import { Speaker, scoreVoice } from "@/lib/speech/synthesis";
 import { createBrowserStt } from "@/lib/speech/recognition";
 import { checkGateAnswer, hashPin, isValidPin, makeGateChallenge, verifyPin } from "@/lib/parent/gate";
 
@@ -59,6 +59,33 @@ describe("speech output", () => {
     const synth = { cancel: () => { throw new Error("x"); }, speak: vi.fn(), getVoices: () => [], addEventListener: vi.fn() } as unknown as SpeechSynthesis;
     vi.stubGlobal("SpeechSynthesisUtterance", class {});
     await expect(new Speaker({ speechSynthesis: synth }).speak("hi", { volume: 1, muted: false })).resolves.toBeUndefined();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("voice choice", () => {
+  const v = (name: string, lang = "en-US", localService = true) => ({ name, lang, localService }) as SpeechSynthesisVoice;
+  const synthWith = (voices: SpeechSynthesisVoice[]) => ({ cancel: vi.fn(), speak: vi.fn(), getVoices: () => voices, addEventListener: vi.fn() }) as unknown as SpeechSynthesis;
+
+  it("prefers a natural female voice over robotic or male ones", () => {
+    const sp = new Speaker({ speechSynthesis: synthWith([v("Fred"), v("Daniel", "en-GB"), v("Albert"), v("Samantha"), v("Karen", "en-AU")]) });
+    expect(sp.voices()[0].name).toBe("Samantha");
+    expect(sp.voices().slice(-1)[0].name).not.toBe("Samantha");
+  });
+  it("ranks enhanced/natural voices first and ignores non-English", () => {
+    const sp = new Speaker({ speechSynthesis: synthWith([v("Samantha"), v("Microsoft Aria Online (Natural)", "en-US", false), v("Amelie", "fr-FR")]) });
+    expect(sp.voices().map((x) => x.name)).toEqual(["Microsoft Aria Online (Natural)", "Samantha"]);
+  });
+  it("uses the parent's chosen voice, else the best one", async () => {
+    vi.stubGlobal("SpeechSynthesisUtterance", class { voice: unknown; onend?: () => void; });
+    const spoken: { voice: { name: string } }[] = [];
+    const synth = { cancel: vi.fn(), getVoices: () => [v("Samantha"), v("Karen", "en-AU")], addEventListener: vi.fn(),
+      speak: (u: { voice: { name: string }; onend: () => void }) => { spoken.push(u); u.onend(); } } as unknown as SpeechSynthesis;
+    const sp = new Speaker({ speechSynthesis: synth });
+    const o = { volume: 1, muted: false };
+    await sp.speak("hi", o); sp.setPreferred("Karen"); await sp.speak("hi", o); sp.setPreferred("Gone"); await sp.speak("hi", o);
+    expect(spoken.map((u) => u.voice.name)).toEqual(["Samantha", "Karen", "Samantha"]);
+    expect(scoreVoice(v("Fred"))).toBeLessThan(0);
     vi.unstubAllGlobals();
   });
 });

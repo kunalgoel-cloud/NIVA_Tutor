@@ -12,6 +12,7 @@ export const ParentSettingsSchema = z.object({
     volume: z.number().min(0).max(1).default(0.8),
     speakInstructions: z.boolean().default(true),
     soundEffects: z.boolean().default(true),
+    voiceName: z.string().max(200).nullable().default(null), // null = friendliest voice found on this device
   }).prefault({}),
   speech: z.object({
     microphoneEnabled: z.boolean().default(false), // parent must opt in
