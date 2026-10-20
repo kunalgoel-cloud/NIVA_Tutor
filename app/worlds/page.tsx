@@ -7,7 +7,7 @@ import { WorldCard } from "@/components/worlds/WorldCard";
 import { WORLDS } from "@/content/worlds";
 
 export default function WorldsHome() {
-  const { visibleActivities, profile } = useApp();
+  const { freshActivities: visibleActivities, profile } = useApp();
   return (
     <RequireProfile>
       <ChildShell>

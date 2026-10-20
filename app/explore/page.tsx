@@ -12,11 +12,11 @@ export default function ExplorePage() {
 }
 
 function ExploreInner() {
-  const { visibleActivities, profile, attempts, settings } = useApp();
+  const { freshActivities, profile, playedIds, settings } = useApp();
   const [world, setWorld] = useState<string>("all");
   const band = ageBandIndex(profile?.ageBand ?? "little-explorer");
-  const played = new Set(attempts.map((a) => a.activityId));
-  const list = visibleActivities.filter((a) => ageBandIndex(a.ageBand) <= band && (world === "all" || a.world === world));
+  const played = playedIds;
+  const list = freshActivities.filter((a) => ageBandIndex(a.ageBand) <= band && (world === "all" || a.world === world));
   return (
     <ChildShell title="Explore freely">
       <div className="flex flex-col gap-5">
@@ -31,7 +31,7 @@ function ExploreInner() {
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
           {list.map((a) => <ActivityCard key={a.id} activity={a} played={played.has(a.id)} showDuration={settings.session.showDurations} />)}
         </div>
-        {list.length === 0 && <p className="text-center text-xl font-bold text-ink-soft">Nothing here yet.</p>}
+        {list.length === 0 && <p className="text-center text-xl font-bold text-ink-soft">You played every game here! 🎉 Ask a grown-up for new games.</p>}
       </div>
     </ChildShell>
   );

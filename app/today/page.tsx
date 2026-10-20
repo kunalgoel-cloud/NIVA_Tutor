@@ -22,9 +22,9 @@ function TodayInner() {
         <p className="text-center text-xl font-semibold text-ink-soft">Pick any of these, in any order. Stop whenever you like! 🌟</p>
         {plan.items.length === 0 ? (
           <div className="rounded-card bg-white p-8 text-center shadow-clay" data-testid="empty-adventure">
-            <p className="text-5xl" aria-hidden>🌱</p>
-            <p className="text-xl font-bold">No adventure is ready yet.</p>
-            <p className="mt-1 text-ink-soft">A grown-up can check the activity library.</p>
+            <p className="text-5xl" aria-hidden>🎉</p>
+            <p className="text-xl font-bold">You have played all the games!</p>
+            <p className="mt-1 text-ink-soft">A grown-up can reset the games in the Grown-ups area to play them all again.</p>
           </div>
         ) : (
           <ol className="grid grid-cols-2 gap-5 sm:grid-cols-4" aria-label="Adventure activities">

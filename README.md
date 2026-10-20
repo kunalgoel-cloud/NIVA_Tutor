@@ -1,7 +1,7 @@
 # Little Wonder World
 
 A private, gentle, game-style early-learning app for one child, aged 3 now and growing to 7.
-Five learning worlds (Number Kingdom, Conversation Café, Puzzle Planet, Wonder World, Creativity Forest), 58 original
+Five learning worlds (Number Kingdom, Conversation Café, Puzzle Planet, Wonder World, Creativity Forest), 91 original
 activities for ages 3–4, a parent area with evidence-based progress, and an optional AI conversation partner.
 
 **It works fully with no accounts, no database and no AI key.** Everything below is honest about what is built and tested.
@@ -42,7 +42,7 @@ See [docs/checklist.md](docs/checklist.md) for the full prioritised list. In sho
 
 | Area | Status |
 |---|---|
-| 5 reusable game engines, 58 data-driven activities, validation, graceful errors | Implemented and tested |
+| 5 reusable game engines, 91 data-driven activities, validation, graceful errors | Implemented and tested |
 | Hints, feedback, evidence tracking, rules-based progress + recommendations, Today's Adventure | Implemented and tested |
 | Parent area: gate, overview, progress, history, library/publishing, settings, export/delete | Implemented and tested |
 | Local demo mode with clearly fictional data | Implemented and tested |

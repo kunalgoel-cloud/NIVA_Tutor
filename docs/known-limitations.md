@@ -22,3 +22,6 @@
 - Open-ended creative rounds record participation only; they cannot raise an objective above "Practising".
 - Emoji appearance varies by OS version. Some emoji may look different on older iPadOS.
 - `localStorage` is shared per browser profile: two children on one iPad should use separate profiles (supported).
+
+## Games are not repeated (by default)
+A finished game (one played to the end; stopping early does not count) is hidden from the child's lists and from Today's Adventure until a grown-up uses **Grown-ups → Settings → Games → Reset all games**. This keeps play fresh, but young children also learn by repetition: with 91 games a child can run out, and the learning engine then has nothing to revisit. The switch "Don't repeat games" turns the rule off. Resetting keeps all history and progress; it only moves the "already played" marker.

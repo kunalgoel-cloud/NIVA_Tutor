@@ -150,7 +150,7 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
         <p aria-hidden className="text-5xl">🌟🌈🌟</p>
         {mission && <p className="rounded-2xl bg-white px-5 py-3 text-lg font-semibold shadow-clay">🏠 Try this with a grown-up: {mission}</p>}
         <div className="flex flex-wrap justify-center gap-4">
-          <BigButton variant="soft" onClick={playAgain}>🔁 Play again</BigButton>
+          {!app.settings.session.neverRepeat && <BigButton variant="soft" onClick={playAgain}>🔁 Play again</BigButton>}
           {recs[0] && <BigButton href={`/play/${recs[0].activity.id}`}>➡ Another game</BigButton>}
           <BigButton variant="soft" href={backHref}>🌍 Back</BigButton>
         </div>

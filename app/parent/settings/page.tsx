@@ -12,7 +12,9 @@ const INTERESTS = ["animals", "dinosaur", "fruit", "toys", "story", "shapes", "w
 const box = "flex min-h-11 items-center gap-3 font-semibold";
 
 export default function SettingsPage() {
-  const { settings, saveSettings, profile, updateProfile, say } = useApp();
+  const { settings, saveSettings, profile, updateProfile, say, voices, resetGames, playedIds, visibleActivities } = useApp();
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
   const [saved, setSaved] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const speechKey = useSyncExternalStore(() => () => {}, () => { const d = detectSpeech(); return `${+d.synthesis}${+d.recognition}`; }, () => "");
@@ -52,12 +54,37 @@ export default function SettingsPage() {
             <option value="">Off</option>{[10, 15, 20, 30].map((n) => <option key={n} value={n}>After {n} minutes of one game</option>)}</select></label>
       </Section>
 
+      <Section title="Games" id="games" hint="Keep every game fresh: a finished game is not offered again until you reset.">
+        <label className={box}><input type="checkbox" className="size-5" checked={settings.session.neverRepeat} onChange={(e) => void update({ ...settings, session: { ...settings.session, neverRepeat: e.target.checked } })} /> Don&apos;t repeat games (finished games disappear until reset)</label>
+        {profile ? (
+          <div className="mt-2 flex flex-col items-start gap-2">
+            <p className="text-sm text-ink-soft">{profile.nickname} has finished {playedIds.size} of {visibleActivities.length} games. Resetting makes every game new again. Progress, history and the learning picture are kept.</p>
+            {!confirmReset ? (
+              <PBtn onClick={() => { setConfirmReset(true); setResetDone(false); }}>🔄 Reset all games</PBtn>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Confirm reset">
+                <span className="font-semibold">Make all games new again for {profile.nickname}?</span>
+                <PBtn tone="primary" onClick={async () => { await resetGames(); setConfirmReset(false); setResetDone(true); }}>Yes, reset all games</PBtn>
+                <PBtn onClick={() => setConfirmReset(false)}>Cancel</PBtn>
+              </div>
+            )}
+            <p role="status" aria-live="polite" className="font-semibold text-good">{resetDone ? "✓ All games are new again." : ""}</p>
+          </div>
+        ) : <p className="mt-2 text-sm text-ink-soft">Choose a child profile first.</p>}
+      </Section>
+
       <Section title="Audio" id="audio">
         <label className={box}><input type="checkbox" className="size-5" checked={!settings.audio.muted} onChange={(e) => void update({ ...settings, audio: { ...settings.audio, muted: !e.target.checked } })} /> Sound on</label>
         <label className={box}><input type="checkbox" className="size-5" checked={settings.audio.speakInstructions} onChange={(e) => void update({ ...settings, audio: { ...settings.audio, speakInstructions: e.target.checked } })} /> Read instructions and replies aloud</label>
         <label className={box}><input type="checkbox" className="size-5" checked={settings.audio.soundEffects} onChange={(e) => void update({ ...settings, audio: { ...settings.audio, soundEffects: e.target.checked } })} /> Gentle sound effects</label>
         <label className="my-2 flex max-w-xs flex-col gap-1 font-semibold" htmlFor="vol">Volume
           <input id="vol" type="range" min={0} max={1} step={0.1} value={settings.audio.volume} onChange={(e) => void update({ ...settings, audio: { ...settings.audio, volume: Number(e.target.value) } })} className="h-11" /></label>
+        <label className="my-2 flex max-w-md flex-col gap-1 font-semibold" htmlFor="voice">Voice
+          <select id="voice" value={settings.audio.voiceName ?? ""} onChange={(e) => void update({ ...settings, audio: { ...settings.audio, voiceName: e.target.value || null } })} className="min-h-11 rounded-lg border-2 border-line bg-white px-2">
+            <option value="">Automatic: friendliest voice on this device</option>
+            {voices().map((v) => <option key={v.name} value={v.name}>{v.name} ({v.lang}{v.local ? "" : ", online"})</option>)}
+          </select>
+          <span className="text-sm font-normal text-ink-soft">Voices come from your device or browser. Newer iPads and Macs have softer ones (look for Samantha, Karen or Siri, and under Settings → Accessibility → Spoken Content → Voices you can download Enhanced versions). Voices marked “online” may send the spoken text to the browser maker.</span></label>
         <PBtn onClick={() => void say("Hello! This is how I sound.")}>🔈 Test the voice</PBtn>
         <p className="mt-2 text-sm text-ink-soft">Voice support on this browser: {speech === null ? "checking…" : speech.synthesis ? "available" : "not available (games still work silently, with on-screen text)"}.</p>
       </Section>

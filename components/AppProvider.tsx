@@ -10,6 +10,7 @@ import { getSupabase } from "@/lib/database/supabase-client";
 import { SupabaseRepository } from "@/lib/database/supabase-repository";
 import type { AppData, ChildProfile, Repository } from "@/lib/database/types";
 import type { ActivityAttempt } from "@/lib/learning/types";
+import { playedActivityIds } from "@/lib/learning/played";
 import type { ParentSettings } from "@/lib/parent/settings";
 import { effectiveActivity, isChildVisible } from "@/lib/validation/publication";
 import { recommend, type Recommendation } from "@/lib/recommendations/recommend";
@@ -34,6 +35,9 @@ type Ctx = {
   attempts: ActivityAttempt[]; // active profile only
   allActivities: Activity[]; // with parent publication overrides applied
   visibleActivities: Activity[]; // what a child may see
+  freshActivities: Activity[]; // child-visible games this child has not finished yet (all of them if repeats are allowed)
+  playedIds: Set<string>;
+  resetGames: () => Promise<void>;
   createProfile: (nickname: string, ageBand: AgeBand, isDemo?: boolean) => Promise<void>;
   updateProfile: (id: string, patch: Partial<Pick<ChildProfile, "nickname" | "ageBand">>) => Promise<void>;
   setActiveProfile: (id: string) => Promise<void>;
@@ -46,6 +50,7 @@ type Ctx = {
   recommendations: (domains?: Activity["domain"][]) => Recommendation[];
   adventure: () => AdventurePlan;
   say: (text: string) => Promise<void>;
+  voices: () => { name: string; lang: string; local: boolean }[];
   stopSpeaking: () => void;
   chime: (kind: Chime) => void;
   speechSupported: boolean;
@@ -119,18 +124,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const attempts = useMemo(() => data.attempts.filter((a) => a.childProfileId === profile?.id), [data.attempts, profile?.id]);
   const allActivities = useMemo(() => ACTIVITIES.map((a) => effectiveActivity(a, settings.statusOverrides)), [settings.statusOverrides]);
   const visibleActivities = useMemo(() => allActivities.filter(isChildVisible), [allActivities]);
+  const playedIds = useMemo(() => playedActivityIds(attempts, profile ? settings.session.gamesResetAt[profile.id] : null), [attempts, profile, settings.session.gamesResetAt]);
+  const freshActivities = useMemo(() => (settings.session.neverRepeat ? visibleActivities.filter((a) => !playedIds.has(a.id)) : visibleActivities), [visibleActivities, playedIds, settings.session.neverRepeat]);
 
   const recommendations = useCallback((domains?: Activity["domain"][]) =>
-    recommend({ activities: visibleActivities, objectives: OBJECTIVES, attempts, ageBand: profile?.ageBand ?? "little-explorer", now: new Date(), interests: settings.interests, domains }),
-  [visibleActivities, attempts, profile?.ageBand, settings.interests]);
+    recommend({ activities: freshActivities, objectives: OBJECTIVES, attempts, ageBand: profile?.ageBand ?? "little-explorer", now: new Date(), interests: settings.interests, domains }),
+  [freshActivities, attempts, profile?.ageBand, settings.interests]);
   const adventure = useCallback(() =>
-    planAdventure({ activities: visibleActivities, objectives: OBJECTIVES, attempts, ageBand: profile?.ageBand ?? "little-explorer", now: new Date(), interests: settings.interests }, OFFLINE_MISSIONS, settings.session.adventureLength),
-  [visibleActivities, attempts, profile?.ageBand, settings.interests, settings.session.adventureLength]);
+    planAdventure({ activities: freshActivities, objectives: OBJECTIVES, attempts, ageBand: profile?.ageBand ?? "little-explorer", now: new Date(), interests: settings.interests }, OFFLINE_MISSIONS, settings.session.adventureLength),
+  [freshActivities, attempts, profile?.ageBand, settings.interests, settings.session.adventureLength]);
 
   const say = useCallback((text: string) => {
     if (!settings.audio.speakInstructions) return Promise.resolve();
     return speaker.current?.speak(text, { volume: settings.audio.volume, muted: settings.audio.muted }) ?? Promise.resolve();
   }, [settings.audio]);
+  const voices = useCallback(() => (speaker.current?.voices() ?? []).map((v) => ({ name: v.name, lang: v.lang, local: v.localService })), []);
+  useEffect(() => { speaker.current?.setPreferred(settings.audio.voiceName); }, [settings.audio.voiceName]);
+  const resetGames = useCallback(async () => {
+    if (!profile) return;
+    // Evidence and history are kept; only the "already played" marker moves forward.
+    await run(() => repo.saveSettings({ ...settings, session: { ...settings.session, gamesResetAt: { ...settings.session.gamesResetAt, [profile.id]: new Date().toISOString() } } }),
+      (d) => withSettings(d, { ...settings, session: { ...settings.session, gamesResetAt: { ...settings.session.gamesResetAt, [profile.id]: new Date().toISOString() } } }));
+  }, [profile, settings, repo, run]);
   const stopSpeaking = useCallback(() => speaker.current?.cancel(), []);
   const chime = useCallback((kind: Chime) => {
     if (settings.audio.muted || !settings.audio.soundEffects) return;
@@ -170,7 +185,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     saveSettings: (s) => run(() => repo.saveSettings(s), (d) => withSettings(d, s)),
     resetDemo: () => run(() => repo.resetDemo(), removeDemo),
     seedDemoHistory: (pid) => run(() => repo.seedDemoHistory(pid), (d) => d),
-    recommendations, adventure, say, stopSpeaking, chime, speechSupported,
+    recommendations, adventure, say, voices, resetGames, freshActivities, playedIds, stopSpeaking, chime, speechSupported,
   };
 
   return (

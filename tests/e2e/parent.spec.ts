@@ -40,6 +40,27 @@ test.describe("parent area", () => {
     await expect(page.getByText("Nothing matches these filters.")).toBeVisible();
   });
 
+  test("a finished game is not offered again until a grown-up resets all games", async ({ page }) => {
+    await startDemo(page);
+    await page.goto("/play/count-the-apples");
+    await page.locator("#start-activity").click();
+    for (const n of [2, 3, 3]) { await answerCountRound(page, n); await page.locator("#continue").click(); }
+    await expect(page.getByTestId("complete")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Play again/ })).toHaveCount(0);
+
+    await page.goto("/worlds/number-kingdom");
+    await expect(page.getByRole("heading", { name: "Number Kingdom" }).first()).toBeVisible();
+    await expect(page.getByText("Count the Apples")).toHaveCount(0);
+    await expect(page.getByText("Count the Toy Cars").first()).toBeVisible();
+
+    await unlockParent(page, "/parent/settings");
+    await page.getByRole("button", { name: /Reset all games/ }).click();
+    await page.getByRole("button", { name: "Yes, reset all games" }).click();
+    await expect(page.getByText("All games are new again.")).toBeVisible();
+
+    await page.goto("/worlds/number-kingdom");
+    await expect(page.getByText("Count the Apples").first()).toBeVisible();
+  });
   test("suggestions explain why they were chosen, and offline ideas are separate", async ({ page }) => {
     await startDemo(page);
     await unlockParent(page);
