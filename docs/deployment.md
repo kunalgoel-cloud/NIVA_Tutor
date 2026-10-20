@@ -15,7 +15,7 @@ npm run dev
 |---|---|---|
 | `AI_ENABLED`, `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` | server only | AI conversation |
 | `AI_RATE_LIMIT_PER_HOUR`, `AI_TIMEOUT_MS` | server only | abuse protection |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public | future Supabase use |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public (publishable key only) | cloud storage and parent sign-in |
 | `SUPABASE_SERVICE_ROLE_KEY` | server only, scripts | never expose to the browser |
 
 4. Deploy. Open the Vercel URL on the iPad → Share → Add to Home Screen.
@@ -31,4 +31,6 @@ stores progress only on each device, but consider enabling protection for a priv
 - Read [privacy.md](privacy.md). This is **not legal advice or a compliance claim**.
 - If using AI: review the provider's data-retention and data-use terms and set a spend limit with the provider.
 
-This guide was not exercised against a live Vercel or Supabase account (no credentials were available).
+`NEXT_PUBLIC_` values are baked in at build time, so redeploy after changing them. In Supabase (Authentication → URL Configuration) set the Site URL to your Vercel address so email links return to the app.
+
+This guide was not exercised against a live Vercel account. The Supabase project exists and its schema is applied, but the live API and sign-in flow were not tested from the build sandbox.

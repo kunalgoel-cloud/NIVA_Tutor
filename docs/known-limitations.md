@@ -3,11 +3,11 @@
 **Not tested on real hardware or services**
 - No real iPad or iPadOS Safari test. Layout, touch targets and reduced motion were tested in desktop Chromium at iPad/phone sizes.
   Voice quality, `speechSynthesis` behaviour and microphone recognition on iPadOS are unverified.
-- The Anthropic adapter is tested against a mock only. No live Supabase project or Vercel account was used.
+- The Anthropic adapter is tested against a mock only. The Supabase schema is applied to a live project, but the live API, sign-up/sign-in and email confirmation were never exercised (the build sandbox blocked `supabase.co`). The cloud adapter is tested against an in-memory stand-in only. No Vercel account was used.
 - Curriculum sources were not opened (no internet in the build environment): see curriculum-mapping.md.
 
 **Not built**
-- Supabase login and cloud sync (SQL is ready; `SupabaseRepository` is not written).
+- Cloud features beyond basics: no email-based password reset page, no multi-parent sharing, no offline write queue (if the network drops, new results stay in memory for that session and are not retried).
 - Activities for ages 4–7 (objectives exist, `draft`). Only Little Explorer (3–4) is published.
 - Six future engines: story arranging, puzzles/mazes, explore & discover, create something (drawing), AI-led free conversation; "Draw and Describe" and "Discover the hidden rule" are therefore absent.
 - Server speech-to-text adapter; recorded voice/character audio files; illustrated artwork (emoji + SVG used).

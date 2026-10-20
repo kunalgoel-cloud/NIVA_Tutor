@@ -9,6 +9,7 @@ const NAV = [
   { href: "/parent/history", label: "History" },
   { href: "/parent/library", label: "Library" },
   { href: "/parent/settings", label: "Settings" },
+  { href: "/parent/account", label: "Account" },
   { href: "/parent/data", label: "Data & privacy" },
 ];
 

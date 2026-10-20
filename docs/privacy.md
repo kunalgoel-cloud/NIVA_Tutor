@@ -11,8 +11,12 @@
 - Progress wording is neutral and evidence-based; no labels such as "gifted" or "delayed".
 
 ## Where data lives
-Current mode: browser `localStorage` on the device only (not backed up, not synced). Nothing is sent to any server except, if you enable
-it, the AI conversation requests described in [ai-and-speech.md](ai-and-speech.md).
+- **On this device (default):** browser `localStorage` only. Nothing is sent to a server.
+- **Cloud (only after a parent signs in):** your child's nickname, age band, per-activity results and your settings are stored in your
+  Supabase project (Postgres; region chosen when the project was created). Row Level Security means each parent account can only read
+  its own rows. The parent's email and a password hash are held by Supabase Auth. Supabase and its hosting provider are processors of this
+  data: review their terms and your obligations before using real child data. Speech audio and conversation transcripts are still never stored.
+- If you enable AI chat, the requests described in [ai-and-speech.md](ai-and-speech.md) also go to the AI provider.
 
 ## Retention
 Play history older than the retention window (default 2 years; choose 3 months–5 years in Settings) is deleted automatically when the

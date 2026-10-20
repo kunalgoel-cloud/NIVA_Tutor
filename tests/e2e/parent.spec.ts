@@ -156,3 +156,22 @@ test.describe("parent area", () => {
     await expect(page).toHaveURL(/\/parent\/progress/);
   });
 });
+
+test.describe("cloud account page", () => {
+  test("loads, explains where progress is saved, and never blocks play when signed out", async ({ page }) => {
+    await startDemo(page);
+    await unlockParent(page, "/parent/account");
+    await expect(page.getByRole("heading", { name: /Account & cloud storage/ })).toBeVisible();
+    await expect(page.getByText(/Where progress is saved/)).toBeVisible();
+    // Either Supabase is not configured in this build, or the sign-in form is offered. Both are valid and neither blocks the child.
+    const form = page.locator("#acct-email");
+    if (await form.count()) {
+      await expect(page.getByText(/on this device only/)).toBeVisible();
+      await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+    } else {
+      await expect(page.getByText(/not set up/)).toBeVisible();
+    }
+    await page.goto("/worlds");
+    await expect(page.getByRole("link", { name: /Number Kingdom/ })).toBeVisible();
+  });
+});

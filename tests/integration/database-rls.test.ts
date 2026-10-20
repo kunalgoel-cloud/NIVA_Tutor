@@ -32,9 +32,12 @@ beforeAll(async () => {
     grant usage on schema public, auth to anon, authenticated;
     grant execute on function auth.uid() to anon, authenticated;
     insert into auth.users values ('${A}'), ('${B}');
+    -- Supabase auto-grants everything on new tables to these roles; reproduce that so least-privilege is really tested.
+    alter default privileges in schema public grant all on tables to anon, authenticated;
   `);
   await db.exec(sql("migrations/0001_init.sql"));
   await db.exec(sql("migrations/0002_rls.sql"));
+  await db.exec(sql("migrations/0003_least_privilege.sql"));
   await db.exec(sql("seed.sql"));
 }, 120_000);
 
@@ -110,6 +113,18 @@ describe("Row Level Security", () => {
     expect((await db.query("select id from public.activities")).rows.length).toBe(ACTIVITIES.length);
     await fails(`update public.activities set title = 'x' where id = 'count-the-apples'`, /permission denied/);
     await fails(`insert into public.learning_domains (id,name,slug,description,display_order) values ('x','x','x','x',1)`, /permission denied/);
+  });
+  it("signed-in users hold only the privileges the app needs (no TRUNCATE/REFERENCES/TRIGGER anywhere)", async () => {
+    await as("postgres");
+    const g = (await db.query<{ table_name: string; privs: string }>(`select table_name, string_agg(privilege_type, ',' order by privilege_type) privs from information_schema.role_table_grants where table_schema='public' and grantee='authenticated' group by table_name`)).rows;
+    const privs = Object.fromEntries(g.map((r) => [r.table_name, r.privs]));
+    for (const t of ["learning_domains", "curriculum_frameworks", "learning_objectives", "objective_prerequisites", "objective_framework_mappings", "activities", "activity_objectives"]) expect(privs[t], t).toBe("SELECT");
+    for (const t of ["child_profiles", "activity_attempts", "learning_progress", "parent_settings", "parent_activity_overrides"]) expect(privs[t], t).toBe("DELETE,INSERT,SELECT,UPDATE");
+    const anon = (await db.query(`select 1 from information_schema.role_table_grants where table_schema='public' and grantee='anon'`)).rows;
+    expect(anon).toHaveLength(0);
+    await as("authenticated", A);
+    await fails(`truncate public.activity_attempts`, /permission denied/);
+    await fails(`truncate public.activities`, /permission denied/);
   });
   it("export returns only the caller's own child, and nothing for someone else's", async () => {
     await as("authenticated", A);

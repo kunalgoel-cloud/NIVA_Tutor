@@ -16,6 +16,7 @@
     "db:seed-sql": "tsx scripts/generate-seed-sql.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "motion": "^14.4.0",
     "next": "^16.4.2",
     "react": "^19.3.1",

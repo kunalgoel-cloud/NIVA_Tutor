@@ -6,7 +6,9 @@ import type { Activity } from "@/lib/games/schema";
 import type { AgeBand } from "@/lib/curriculum/schema";
 import { addProfile, emptyData, removeDemo, removeProfile, withAttempt, withNote, withProfilePatch, withSettings } from "@/lib/database/data";
 import { LocalRepository } from "@/lib/database/local-repository";
-import type { AppData, ChildProfile } from "@/lib/database/types";
+import { getSupabase } from "@/lib/database/supabase-client";
+import { SupabaseRepository } from "@/lib/database/supabase-repository";
+import type { AppData, ChildProfile, Repository } from "@/lib/database/types";
 import type { ActivityAttempt } from "@/lib/learning/types";
 import type { ParentSettings } from "@/lib/parent/settings";
 import { effectiveActivity, isChildVisible } from "@/lib/validation/publication";
@@ -15,8 +17,16 @@ import { planAdventure, type AdventurePlan } from "@/lib/recommendations/adventu
 import { Speaker } from "@/lib/speech/synthesis";
 import { playChime, type Chime } from "@/lib/speech/chime";
 
+export type CloudState = { configured: boolean; signedIn: boolean; email: string | null };
+export type AuthResult = { ok: boolean; message: string };
+
 type Ctx = {
   ready: boolean;
+  cloud: CloudState;
+  signIn: (email: string, password: string) => Promise<AuthResult>;
+  signUp: (email: string, password: string) => Promise<AuthResult>;
+  signOut: () => Promise<void>;
+  importLocalToCloud: () => Promise<AuthResult>;
   storageError: string | null;
   data: AppData;
   profile: ChildProfile | null;
@@ -49,7 +59,12 @@ export const useApp = () => {
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const repo = useMemo(() => new LocalRepository(), []);
+  const local = useMemo(() => new LocalRepository(), []);
+  const supabase = useMemo(() => getSupabase(), []);
+  const [session, setSession] = useState<{ userId: string; email: string | null } | null>(null);
+  const [authReady, setAuthReady] = useState(!supabase); // with no Supabase configured there is nothing to wait for
+  // Signed in -> cloud storage. Signed out (or Supabase not configured) -> on-device storage.
+  const repo = useMemo<Repository>(() => (session && supabase ? new SupabaseRepository(supabase, session.userId) : local), [session, supabase, local]);
   const [data, setData] = useState<AppData>(emptyData());
   const [ready, setReady] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -57,8 +72,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [speechSupported, setSpeechSupported] = useState(false);
 
   useEffect(() => {
+    if (!supabase) return;
+    let alive = true;
+    supabase.auth.getSession().then(({ data: d }) => {
+      if (!alive) return;
+      setSession(d.session ? { userId: d.session.user.id, email: d.session.user.email ?? null } : null);
+      setAuthReady(true);
+    }).catch(() => { if (alive) setAuthReady(true); });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setSession(sess ? { userId: sess.user.id, email: sess.user.email ?? null } : null));
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!authReady) return;
     let cancelled = false;
     (async () => {
+      setReady(false);
       try {
         const d = await repo.applyRetention(new Date());
         if (!cancelled) setData(d);
@@ -68,10 +97,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled) setReady(true);
       }
     })();
+    return () => { cancelled = true; };
+  }, [repo, authReady]);
+
+  useEffect(() => {
     speaker.current = new Speaker();
     setSpeechSupported(speaker.current.supported);
-    return () => { cancelled = true; };
-  }, [repo]);
+  }, []);
 
   /** Runs a repo operation. If storage fails, the change still applies in memory so play continues. */
   const run = useCallback(async (op: () => Promise<AppData>, fallback: (d: AppData) => AppData) => {
@@ -105,8 +137,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     playChime(kind, settings.audio.volume);
   }, [settings.audio]);
 
+  const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    if (!supabase) return { ok: false, message: "Cloud storage is not set up on this app." };
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    return error ? { ok: false, message: "That email and password did not work." } : { ok: true, message: "Signed in." };
+  }, [supabase]);
+  const signUp = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    if (!supabase) return { ok: false, message: "Cloud storage is not set up on this app." };
+    const { data: d, error } = await supabase.auth.signUp({ email: email.trim(), password });
+    if (error) return { ok: false, message: error.message.toLowerCase().includes("password") ? "Please choose a longer, stronger password." : "Could not create the account. Check the email address." };
+    return d.session ? { ok: true, message: "Account created and signed in." } : { ok: true, message: "Almost there! Open the email we sent and confirm your address, then sign in." };
+  }, [supabase]);
+  const signOut = useCallback(async () => { await supabase?.auth.signOut(); }, [supabase]);
+  const importLocalToCloud = useCallback(async (): Promise<AuthResult> => {
+    if (!(repo instanceof SupabaseRepository)) return { ok: false, message: "Sign in first." };
+    try {
+      const res = await repo.importLocal(await local.load());
+      setData(await repo.load());
+      return { ok: true, message: `Copied ${res.profiles} profile(s) and ${res.attempts} activity record(s) to your cloud account. The copy on this device was left as it is.` };
+    } catch { return { ok: false, message: "The copy did not finish. Please try again." }; }
+  }, [repo, local]);
+
   const value: Ctx = {
-    ready, storageError, data, profile, settings, attempts, allActivities, visibleActivities,
+    ready, cloud: { configured: !!supabase, signedIn: !!session, email: session?.email ?? null }, signIn, signUp, signOut, importLocalToCloud,
+    storageError, data, profile, settings, attempts, allActivities, visibleActivities,
     createProfile: (nickname, ageBand, isDemo) => run(() => repo.createProfile({ nickname, ageBand, isDemo }), (d) => addProfile(d, { nickname, ageBand, isDemo })),
     updateProfile: (id, patch) => run(() => repo.updateProfile(id, patch), (d) => withProfilePatch(d, id, patch)),
     setActiveProfile: (id) => run(() => repo.setActiveProfile(id), (d) => ({ ...d, activeProfileId: id })),

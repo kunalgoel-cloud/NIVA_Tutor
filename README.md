@@ -48,13 +48,13 @@ See [docs/checklist.md](docs/checklist.md) for the full prioritised list. In sho
 | Local demo mode with clearly fictional data | Implemented and tested |
 | AI provider abstraction + safety filters + built-in conversation fallback | Implemented and tested (provider call tested with a mock, **not** against the live API) |
 | Browser speech (read aloud, microphone with tap fallback) | Implemented; read-aloud and fallbacks tested with fakes, **not on a real iPad** |
-| SQL schema, Row Level Security, seed | Implemented; tested in an in-process Postgres, **not on a live Supabase project** |
-| Cloud sync / Supabase login in the app | **Not implemented** (progress is stored on the device) |
+| SQL schema, Row Level Security, least-privilege grants, seed | Applied to a live Supabase project; rules tested in an in-process Postgres and checked on the live schema via SQL |
+| Cloud storage + parent sign-in (Supabase) | Implemented; adapter tested against an in-memory stand-in; **the live API connection and sign-in flow are not yet tested** |
 | Content for ages 4–7 | **Not implemented** (structure and objectives exist; activities do not) |
 | Six more engines (story arranging, mazes, drawing, …) | **Not implemented** (architecture ready) |
 | Curriculum sources verified | **Pending** (could not open them while building) |
 
 ## Documentation
 - [Architecture](docs/architecture.md) · [Curriculum mapping & source register](docs/curriculum-mapping.md) · [Content workflow](docs/content-workflow.md)
-- [AI & speech](docs/ai-and-speech.md) · [Database](docs/database.md) · [Deployment](docs/deployment.md)
+- [AI & speech](docs/ai-and-speech.md) · [Database & cloud storage](docs/database.md) · [Deployment](docs/deployment.md)
 - [Privacy & data retention](docs/privacy.md) · [Known limitations](docs/known-limitations.md) · [Checklist](docs/checklist.md)

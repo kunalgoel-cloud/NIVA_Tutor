@@ -8,6 +8,6 @@ export async function GET() {
   const ai = aiConfigStatus();
   return NextResponse.json({
     ai: ai.ok ? { configured: true } : { configured: false, missing: ai.missing, message: ai.message },
-    supabase: { configured: supabaseConfigured(), note: "Supabase storage is not wired into the app yet; progress is stored on this device." },
+    supabase: { configured: supabaseConfigured(), note: "When configured, parents can sign in to store progress in Supabase; otherwise progress stays on this device." },
   });
 }

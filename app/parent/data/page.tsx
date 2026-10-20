@@ -7,7 +7,7 @@ import { buildExport } from "@/lib/privacy/export";
 import { STORAGE_KEY } from "@/lib/database/local-repository";
 
 export default function DataPage() {
-  const { data, profile, deleteProfile, resetDemo, seedDemoHistory, saveSettings, attempts } = useApp();
+  const { data, profile, deleteProfile, resetDemo, seedDemoHistory, saveSettings, attempts, cloud } = useApp();
   const [target, setTarget] = useState(profile?.id ?? "");
   const [confirm, setConfirm] = useState("");
   const [allConfirm, setAllConfirm] = useState("");
@@ -43,8 +43,14 @@ export default function DataPage() {
       {msg && <p role="status" className="mb-4 rounded-xl bg-emerald-50 px-4 py-2 font-semibold">{msg}</p>}
       <Section title="Where the data lives" id="where">
         <ul className="list-disc space-y-1 pl-5">
-          <li>Profiles, play history and settings are stored <strong>only in this browser on this device</strong>. They are not backed up or synchronised anywhere.</li>
-          <li>Clearing the browser&apos;s site data, or using private browsing, erases them. Use the export below to keep a copy.</li>
+          {cloud.signedIn ? (
+            <li>You are signed in, so profiles, play history and settings are stored in your <strong>cloud account</strong> (Supabase, protected so only your account can read them) and are available on any device you sign in on.</li>
+          ) : (
+            <>
+              <li>Profiles, play history and settings are stored <strong>only in this browser on this device</strong>. They are not backed up or synchronised anywhere{cloud.configured ? " unless you sign in on the Account page" : ""}.</li>
+              <li>Clearing the browser&apos;s site data, or using private browsing, erases them. Use the export below to keep a copy.</li>
+            </>
+          )}
           <li>Voice recordings are never recorded. Conversation transcripts are never saved.</li>
           <li>Currently stored: {data.profiles.length} profile(s), {data.attempts.length} activity record(s) (older than {data.settings.privacy.retentionDays} days are removed automatically).</li>
         </ul>
@@ -87,7 +93,9 @@ export default function DataPage() {
       </Section>
 
       <Section title="Cloud storage (Supabase)" id="cloud">
-        <p>Not connected yet. The database design and security rules are written in <code>supabase/migrations/</code>, but this version of the app does not use them. See <code>docs/database.md</code>.</p>
+        {!cloud.configured && <p>Not set up in this copy of the app. See <code>docs/database.md</code>.</p>}
+        {cloud.configured && !cloud.signedIn && <p>Available, but you are not signed in, so data stays on this device. Sign in on the <a className="underline" href="/parent/account">Account page</a>.</p>}
+        {cloud.signedIn && <p>Connected as {cloud.email}. &ldquo;Delete everything&rdquo; above removes this account&apos;s profiles and history from the cloud; it does not delete the sign-in account itself.</p>}
         <p className="mt-1 text-sm text-ink-soft">This profile has {attempts.length} activity record(s).</p>
       </Section>
     </>
