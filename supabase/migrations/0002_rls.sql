@@ -55,7 +55,10 @@ create policy "parents manage their own overrides" on public.parent_activity_ove
 
 -- ---------- Table privileges ----------
 -- Nobody anonymous touches anything. (RLS is the lock; revoking grants is the second lock.)
-revoke all on all tables in schema public from anon;
+-- Scoped to this app's tables so it is safe in a Supabase project that also holds other data.
+revoke all on public.learning_domains, public.curriculum_frameworks, public.learning_objectives, public.objective_prerequisites,
+  public.objective_framework_mappings, public.activities, public.activity_objectives, public.child_profiles, public.activity_attempts,
+  public.learning_progress, public.parent_settings, public.parent_activity_overrides from anon;
 grant select on public.learning_domains, public.curriculum_frameworks, public.learning_objectives, public.objective_prerequisites,
                public.objective_framework_mappings, public.activities, public.activity_objectives to authenticated;
 grant select, insert, update, delete on public.child_profiles, public.activity_attempts, public.learning_progress,

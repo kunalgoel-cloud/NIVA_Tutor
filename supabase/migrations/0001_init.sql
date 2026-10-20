@@ -153,7 +153,7 @@ create table public.parent_activity_overrides (
 );
 
 -- keep updated_at honest
-create or replace function public.touch_updated_at() returns trigger language plpgsql as $$
+create or replace function public.touch_updated_at() returns trigger language plpgsql set search_path = public as $$
 begin new.updated_at = now(); return new; end $$;
 create trigger activities_touch before update on public.activities for each row execute function public.touch_updated_at();
 create trigger progress_touch before update on public.learning_progress for each row execute function public.touch_updated_at();
