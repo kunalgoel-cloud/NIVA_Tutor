@@ -2,6 +2,15 @@ import { expect, test } from "@playwright/test";
 import fs from "node:fs/promises";
 import { answerCountRound, gateAnswer, startDemo, unlockParent } from "./helpers";
 
+
+/** Moves the fake clock in small steps until the play timer has visibly started counting, so a slow machine cannot skip ahead before the page's timer exists. */
+async function waitForPlayTimer(page: import("@playwright/test").Page) {
+  await expect.poll(async () => {
+    await page.clock.runFor(2000);
+    return page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("lww:screentime:")).map((k) => JSON.parse(localStorage.getItem(k) ?? "{}").usedSeconds ?? 0).reduce((a, b) => Math.max(a, b), 0));
+  }, { timeout: 30_000 }).toBeGreaterThanOrEqual(5);
+}
+
 test.describe("parent area", () => {
   test("is protected by the gate and rejects a wrong answer", async ({ page }) => {
     await startDemo(page);
@@ -72,7 +81,8 @@ test.describe("parent area", () => {
 
     await page.goto("/worlds");
     await expect(page.getByRole("link", { name: /Number Kingdom/ })).toBeVisible();
-    await page.clock.runFor(8.5 * 60_000);
+    await waitForPlayTimer(page);
+    await page.clock.runFor(8 * 60_000);
     await expect(page.getByTestId("time-warning")).toBeVisible();
     await expect(page.getByTestId("screen-lock")).toHaveCount(0);
     await page.clock.runFor(2 * 60_000);
@@ -99,7 +109,8 @@ test.describe("parent area", () => {
     await page.getByLabel("Play time before resting").selectOption("10");
     await page.getByLabel("Then the app rests for").selectOption("1");
     await page.goto("/worlds");
-    await expect(page.getByRole("link", { name: /Number Kingdom/ })).toBeVisible(); // the app is ready before time moves
+    await expect(page.getByRole("link", { name: /Number Kingdom/ })).toBeVisible();
+    await waitForPlayTimer(page);
     await page.clock.runFor(11 * 60_000);
     await expect(page.getByTestId("screen-lock")).toBeVisible();
     await page.clock.runFor(61 * 60_000);
