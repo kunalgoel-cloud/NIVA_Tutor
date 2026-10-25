@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppProvider } from "@/components/AppProvider";
+import { ScreenTimeGuard } from "@/components/ScreenTimeGuard";
 import { OfflineBanner } from "@/components/layout/OfflineBanner";
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="sky-bg antialiased">
         <AppProvider>
           <OfflineBanner />
-          {children}
+          <ScreenTimeGuard>{children}</ScreenTimeGuard>
         </AppProvider>
       </body>
     </html>

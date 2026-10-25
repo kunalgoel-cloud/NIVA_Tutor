@@ -7,6 +7,11 @@ export const ParentSettingsSchema = z.object({
     showDurations: z.boolean().default(true),
     neverRepeat: z.boolean().default(true), // a finished game is not offered again until a grown-up resets games
     gamesResetAt: z.record(z.string(), z.string()).default({}), // child profile id -> when games were last reset
+    screenTime: z.object({
+      enabled: z.boolean().default(false),
+      playMinutes: z.number().int().min(5).max(180).default(20), // play time before the app rests
+      lockHours: z.number().int().min(1).max(24).default(2), // how long the app rests afterwards
+    }).prefault({}),
     gentleBreakReminderMinutes: z.number().int().min(5).max(60).nullable().default(null), // a kind "time for a stretch?" note; never blocks play
   }).prefault({}),
   audio: z.object({

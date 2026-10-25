@@ -35,3 +35,6 @@ Children's data has special treatment (for example verifiable parental consent a
 rules and their commencement dates must be checked at deployment time. **No compliance claim is made here.** The design (minimal data,
 no tracking, parent control, deletion/export) is intended to make a later review easier. For a private single-family app, get advice
 before storing data in the cloud or sharing the app beyond your family.
+
+## Screen-time limit
+Grown-ups → Settings → Screen time can limit play (for example 20 minutes) and then rest the app for a few hours. The play-time count and the rest end time are kept **in this browser only** (`lww:screentime:<child id>`), per child and per device; they are not synced to the cloud, and the limit settings themselves are saved with the other settings. It is a gentle family boundary rather than a security feature: clearing site data, using another browser or device, or a changed device clock can bypass it, and a grown-up can end the rest at any time.
