@@ -61,6 +61,49 @@ test.describe("parent area", () => {
     await page.goto("/worlds/number-kingdom");
     await expect(page.getByText("Count the Apples").first()).toBeVisible();
   });
+  test("screen time: the app rests after the play time, survives a reload, and a grown-up can end it", async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-02-01T10:00:00") });
+    await startDemo(page);
+    await unlockParent(page, "/parent/settings");
+    await page.getByLabel("Limit play time").check();
+    await page.getByLabel("Play time before resting").selectOption("10");
+    await page.getByLabel("Then the app rests for").selectOption("1");
+    await expect(page.getByTestId("screen-status")).toContainText("Played 0 of 10 minutes");
+
+    await page.goto("/worlds");
+    await expect(page.getByRole("link", { name: /Number Kingdom/ })).toBeVisible();
+    await page.clock.runFor(8.5 * 60_000);
+    await expect(page.getByTestId("time-warning")).toBeVisible();
+    await expect(page.getByTestId("screen-lock")).toHaveCount(0);
+    await page.clock.runFor(2 * 60_000);
+    await expect(page.getByTestId("screen-lock")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Time for a rest/ })).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByTestId("screen-lock")).toBeVisible();
+    await page.goto("/worlds/number-kingdom");
+    await expect(page.getByTestId("screen-lock")).toBeVisible();
+
+    await unlockParent(page, "/parent/settings");
+    await expect(page.getByTestId("screen-status")).toContainText("Resting until");
+    await page.getByRole("button", { name: "End the rest now" }).click();
+    await expect(page.getByTestId("screen-status")).toContainText("Played 0 of 10 minutes");
+    await page.goto("/worlds");
+    await expect(page.getByTestId("screen-lock")).toHaveCount(0);
+  });
+  test("screen time: the app wakes up by itself when the rest is over", async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-02-01T10:00:00") });
+    await startDemo(page);
+    await unlockParent(page, "/parent/settings");
+    await page.getByLabel("Limit play time").check();
+    await page.getByLabel("Play time before resting").selectOption("10");
+    await page.getByLabel("Then the app rests for").selectOption("1");
+    await page.goto("/worlds");
+    await page.clock.runFor(10.5 * 60_000);
+    await expect(page.getByTestId("screen-lock")).toBeVisible();
+    await page.clock.runFor(61 * 60_000);
+    await expect(page.getByTestId("screen-lock")).toHaveCount(0);
+  });
   test("suggestions explain why they were chosen, and offline ideas are separate", async ({ page }) => {
     await startDemo(page);
     await unlockParent(page);

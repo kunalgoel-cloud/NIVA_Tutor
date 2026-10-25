@@ -5,6 +5,7 @@ import { Badge, PBtn, Section } from "@/components/parent/ui";
 import { AGE_BANDS, AGE_BAND_INFO, type AgeBand } from "@/lib/curriculum/schema";
 import type { ParentSettings } from "@/lib/parent/settings";
 import { hashPin, isValidPin } from "@/lib/parent/gate";
+import { useScreenTime } from "@/components/ScreenTimeGuard";
 import { detectSpeech } from "@/lib/speech/capabilities";
 
 type Status = { ai: { configured: boolean; missing?: string[]; message?: string } } | null;
@@ -13,6 +14,7 @@ const box = "flex min-h-11 items-center gap-3 font-semibold";
 
 export default function SettingsPage() {
   const { settings, saveSettings, profile, updateProfile, say, voices, resetGames, playedIds, visibleActivities } = useApp();
+  const { status: screen, endBreak, resetTimer } = useScreenTime();
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetDone, setResetDone] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -71,6 +73,37 @@ export default function SettingsPage() {
             <p role="status" aria-live="polite" className="font-semibold text-good">{resetDone ? "✓ All games are new again." : ""}</p>
           </div>
         ) : <p className="mt-2 text-sm text-ink-soft">Choose a child profile first.</p>}
+      </Section>
+
+      <Section title="Screen time" id="screen-time" hint="After the play time is used up, the app rests for a few hours. The count is kept on this device and only runs while a child screen is open.">
+        {(() => {
+          const st = settings.session.screenTime;
+          const setSt = (patch: Partial<typeof st>) => void update({ ...settings, session: { ...settings.session, screenTime: { ...st, ...patch } } });
+          return (
+            <>
+              <label className={box}><input type="checkbox" className="size-5" checked={st.enabled} onChange={(e) => setSt({ enabled: e.target.checked })} /> Limit play time</label>
+              <div className="my-2 flex flex-wrap gap-4">
+                <label className="flex flex-col gap-1 font-semibold" htmlFor="play-min">Play time before resting
+                  <select id="play-min" disabled={!st.enabled} value={st.playMinutes} onChange={(e) => setSt({ playMinutes: Number(e.target.value) })} className="min-h-11 rounded-lg border-2 border-line bg-white px-2 disabled:opacity-50">
+                    {[10, 15, 20, 30, 45, 60, 90].map((n) => <option key={n} value={n}>{n} minutes</option>)}</select></label>
+                <label className="flex flex-col gap-1 font-semibold" htmlFor="lock-hrs">Then the app rests for
+                  <select id="lock-hrs" disabled={!st.enabled} value={st.lockHours} onChange={(e) => setSt({ lockHours: Number(e.target.value) })} className="min-h-11 rounded-lg border-2 border-line bg-white px-2 disabled:opacity-50">
+                    {[1, 2, 3, 4, 6, 8, 12].map((n) => <option key={n} value={n}>{n} {n === 1 ? "hour" : "hours"}</option>)}</select></label>
+              </div>
+              {st.enabled && (
+                <div className="flex flex-col items-start gap-2">
+                  <p data-testid="screen-status" role="status" className="font-semibold">
+                    {screen.locked && screen.lockedUntil
+                      ? `🌙 Resting until ${new Date(screen.lockedUntil).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`
+                      : `⏱ Played ${Math.floor(screen.usedSeconds / 60)} of ${st.playMinutes} minutes in this round.`}
+                  </p>
+                  {screen.locked ? <PBtn onClick={endBreak}>End the rest now</PBtn> : <PBtn onClick={resetTimer}>Restart the play timer</PBtn>}
+                </div>
+              )}
+              <p className="mt-2 text-sm text-ink-soft">This is a gentle family boundary, not a lock that cannot be bypassed: it lives on this device and a grown-up can end the rest any time. Playing in another browser or device has its own timer.</p>
+            </>
+          );
+        })()}
       </Section>
 
       <Section title="Audio" id="audio">
