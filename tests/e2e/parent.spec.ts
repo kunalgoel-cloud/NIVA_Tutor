@@ -99,7 +99,8 @@ test.describe("parent area", () => {
     await page.getByLabel("Play time before resting").selectOption("10");
     await page.getByLabel("Then the app rests for").selectOption("1");
     await page.goto("/worlds");
-    await page.clock.runFor(10.5 * 60_000);
+    await expect(page.getByRole("link", { name: /Number Kingdom/ })).toBeVisible(); // the app is ready before time moves
+    await page.clock.runFor(11 * 60_000);
     await expect(page.getByTestId("screen-lock")).toBeVisible();
     await page.clock.runFor(61 * 60_000);
     await expect(page.getByTestId("screen-lock")).toHaveCount(0);
