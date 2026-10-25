@@ -22,6 +22,12 @@ function describeAnswer(a: Activity, i: number): string {
     case "count-collect": return r.mode === "count" ? `Count answer: ${r.total}` : `Give exactly ${r.target} of ${r.total}`;
     case "match-pair": return r.mode === "pairs" ? `${(r.pairs as unknown[]).length} pairs to match` : `Sort ${(r.items as unknown[]).length} items into ${(r.bins as unknown[]).length} groups`;
     case "complete-pattern": return r.mode === "complete" ? `Correct: ${(r.options ?? []).filter((o) => r.correctIds?.includes(o.id)).map((o) => o.alt).join(" / ")}` : `Order ${(r.steps as unknown[]).length} steps`;
+    case "story-listen": {
+      const q = r as unknown as { kind: string; options?: { id: string; alt: string }[]; correctIds?: string[] };
+      if (q.kind === "page") return "Story page: read aloud, the child must listen to the end before moving on";
+      return `Story question. Correct: ${(q.options ?? []).filter((o) => q.correctIds?.includes(o.id)).map((o) => o.alt).join(" / ")}`;
+    }
+    case "maze": return "Find the way from start to goal (solvable, checked automatically)";
     case "listen-respond": return `Any understandable reply is welcome (${(r.quickReplies as unknown[]).length} tap choices, ${(r.concepts as unknown[]).length} topics recognised)`;
   }
 }

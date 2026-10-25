@@ -2,30 +2,27 @@
 import { useMemo, useState } from "react";
 import type { TapChooseRound } from "@/lib/games/schema";
 import { evaluateTapChoose } from "@/lib/games/evaluate";
+import { GLOW_FROM_LEVEL } from "@/lib/games/hints";
 import { seededShuffle } from "@/lib/games/shuffle";
 import { BigButton } from "@/components/ui/Button";
 import { Tile } from "../Tile";
 import type { EngineProps } from "../types";
 
-export default function TapChoose({ round, seed, hintLevel, reveal, locked, onAttempt }: EngineProps<TapChooseRound>) {
+export default function TapChoose({ round, activity, seed, hintLevel, reveal, locked, onAttempt, say }: EngineProps<TapChooseRound>) {
   const options = useMemo(() => seededShuffle(round.options, `${seed}:${round.id}`), [round, seed]);
   const [phase, setPhase] = useState<"study" | "answer">(round.study ? "study" : "answer");
-  const [tried, setTried] = useState<Set<string>>(new Set());
   const [chosen, setChosen] = useState<string | null>(null);
   const [shaking, setShaking] = useState<string | null>(null);
-
-  // Hint level 3: kindly set aside one wrong option.
-  const eliminated = useMemo(() => {
-    if (hintLevel < 3 || round.openEnded) return null;
-    const ok = new Set([...round.correctIds, ...round.acceptableIds]);
-    return options.find((o) => !ok.has(o.id) && !tried.has(o.id))?.id ?? null;
-  }, [hintLevel, round, options, tried]);
+  const words = activity.presentation === "words";
+  const okIds = useMemo(() => new Set([...round.correctIds, ...round.acceptableIds]), [round]);
+  // From hint level 3 the right choice glows. Every choice stays available at all times.
+  const glowing = hintLevel >= GLOW_FROM_LEVEL && !round.openEnded;
 
   const pick = (id: string) => {
     if (locked || reveal) return;
     const res = evaluateTapChoose(round, id);
     if (res.kind === "incorrect") {
-      setTried((t) => new Set(t).add(id)); setShaking(id); setTimeout(() => setShaking(null), 400);
+      setShaking(id); setTimeout(() => setShaking(null), 400);
       onAttempt({ kind: "incorrect" });
     } else {
       setChosen(id);
@@ -50,14 +47,17 @@ export default function TapChoose({ round, seed, hintLevel, reveal, locked, onAt
           {phase === "study" && <BigButton onClick={() => setPhase("answer")} variant="soft">{round.study.hideLabel ?? "Hide one"}</BigButton>}
         </div>
       )}
+      {phase === "answer" && words && !locked && (
+        <BigButton variant="soft" onClick={() => say(options.map((o) => o.alt).join(". Or: "))} label="Hear the choices">🔈 Hear the choices</BigButton>
+      )}
       {phase === "answer" && (
         <div className={`grid w-full gap-4 ${options.length === 2 ? "grid-cols-2" : options.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
           {options.map((o) => {
-            const isCorrect = [...round.correctIds, ...round.acceptableIds].includes(o.id);
-            const state = chosen === o.id ? "correct" : reveal && isCorrect ? "correct" : tried.has(o.id) ? "tried" : eliminated === o.id ? "dim" : "neutral";
+            const isCorrect = okIds.has(o.id);
+            const state = chosen === o.id ? "correct" : reveal && isCorrect ? "correct" : glowing && isCorrect && chosen === null ? "glow" : "neutral";
             return (
-              <Tile key={o.id} visual={o.visual} label={o.label} alt={o.alt} state={state} shake={shaking === o.id}
-                disabled={locked || reveal || tried.has(o.id) || eliminated === o.id} onClick={() => pick(o.id)} />
+              <Tile key={o.id} visual={o.visual} label={o.label} alt={o.alt} state={state} shake={shaking === o.id} textOnly={words}
+                disabled={locked || reveal} onClick={() => pick(o.id)} />
             );
           })}
         </div>

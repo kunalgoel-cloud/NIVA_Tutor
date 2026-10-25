@@ -38,6 +38,7 @@ beforeAll(async () => {
   await db.exec(sql("migrations/0001_init.sql"));
   await db.exec(sql("migrations/0002_rls.sql"));
   await db.exec(sql("migrations/0003_least_privilege.sql"));
+  await db.exec(sql("migrations/0004_new_engines.sql"));
   await db.exec(sql("seed.sql"));
 }, 120_000);
 

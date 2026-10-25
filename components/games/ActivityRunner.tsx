@@ -8,7 +8,9 @@ import { BigButton } from "@/components/ui/Button";
 import { characterById } from "@/content/characters";
 import type { Activity } from "@/lib/games/schema";
 import { optionCountOf } from "@/lib/games/evaluate";
-import { hintText, nextHintLevel, roundOutcome, shouldOfferHint, shouldShowAnswer, type HintLevel } from "@/lib/games/hints";
+import { hintDwellMs, hintText, nextHintLevel, roundOutcome, type HintLevel } from "@/lib/games/hints";
+import { completePraise, praise, praiseCategory, stepPraise, tryAgain } from "@/lib/games/praise";
+import { roundSpeech } from "@/lib/games/speech-text";
 import type { Observation } from "@/lib/learning/types";
 import { buildAttempt } from "@/lib/learning/attempt";
 import { newId } from "@/lib/database/data";
@@ -17,7 +19,6 @@ import { EngineBoundary } from "./EngineBoundary";
 import type { AttemptReport } from "./types";
 
 type Stage = "intro" | "play" | "done";
-const pick = (list: string[], n: number) => list[n % list.length];
 
 export function ActivityRunner({ activity, backHref }: { activity: Activity; backHref: string }) {
   const app = useApp();
@@ -35,19 +36,27 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
   const [roundDone, setRoundDone] = useState<null | { outcome: Observation["outcome"] }>(null);
   const [reveal, setReveal] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [offerHint, setOfferHint] = useState(false);
+  /** After a wrong answer the child must listen to the hint before the choices open again. */
+  const [learning, setLearning] = useState<null | { text: string; ready: boolean }>(null);
+  const [doneLine, setDoneLine] = useState("");
   const [breakNote, setBreakNote] = useState(false);
   const observations = useRef<Observation[]>([]);
   const startedAt = useRef(0); // set when play starts
   const recorded = useRef(false);
-  const feedbackCount = useRef(0);
+  const learnToken = useRef(0);
+  const pageToken = useRef(0);
 
   const round = activity.rounds[roundIdx];
   const roundPrompt = (round as { prompt: string }).prompt;
-  const hints = (round as { hints?: string[] }).hints ?? [];
+  const spoken = roundSpeech(activity, roundIdx);
+  const roundHints = (round as { hints?: string[] }).hints;
+  const hints = useMemo(() => roundHints ?? [], [roundHints]);
+  const explain = (round as { explain?: string }).explain;
   const isLast = roundIdx >= activity.rounds.length - 1;
+  const isPage = activity.engine === "story-listen" && (round as { kind?: string }).kind === "page";
+  const nextIsQuestion = isPage && (activity.rounds[roundIdx + 1] as { kind?: string } | undefined)?.kind === "question";
+  const category = useMemo(() => praiseCategory(activity), [activity]);
 
-  const speakAndShow = useCallback((text: string) => { setMessage(text); void say(text); }, [say]);
 
   // Gentle, optional break reminder. It never stops play.
   useEffect(() => {
@@ -59,8 +68,17 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
 
   // Speak the prompt when each round begins (after the child pressed Play, so audio is allowed on iPad).
   useEffect(() => {
-    if (stage === "play") { void say(roundPrompt); }
-    return () => stopSpeaking();
+    if (stage !== "play") return;
+    const tokens = pageToken;
+    const token = ++tokens.current;
+    const p = say(spoken);
+    // A story page can only be left once it has been heard (or, with sound off, read for long enough).
+    if (isPage) {
+      void Promise.all([p, new Promise((r) => setTimeout(r, hintDwellMs(spoken)))]).then(() => {
+        if (tokens.current === token) setRoundDone({ outcome: "independent" });
+      });
+    }
+    return () => { tokens.current++; stopSpeaking(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, roundIdx]);
 
@@ -72,56 +90,58 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
     }
   }, [profile, activity, recordAttempt]);
 
-  const resetRound = () => { setWrong(0); setHintLevel(0); setAttempts(0); setRoundDone(null); setReveal(false); setMessage(null); setOfferHint(false); feedbackCount.current = 0; };
+  const resetRound = () => { setWrong(0); setHintLevel(0); setAttempts(0); setRoundDone(null); setReveal(false); setMessage(null); setLearning(null); learnToken.current++; };
 
   const onAttempt = useCallback((r: AttemptReport) => {
-    if (roundDone) return;
+    if (roundDone || learning) return;
     setAttempts((a) => a + 1);
     if (r.kind === "incorrect") {
       const w = wrong + 1; setWrong(w); chime("try");
-      if (shouldShowAnswer(w, hintLevel)) {
-        setReveal(true); setRoundDone({ outcome: "shown" }); speakAndShow("Let's do this one together. Look!");
-      } else { speakAndShow(pick(activity.feedback.encourage, w - 1)); setOfferHint(shouldOfferHint(w)); }
+      const lvl = nextHintLevel(hintLevel); setHintLevel(lvl);
+      const text = `${tryAgain()} ${hintText(hints, lvl, explain) ?? ""}`.trim();
+      const token = ++learnToken.current;
+      setMessage(null); setLearning({ text, ready: false });
+      // The choices stay locked until the hint has been spoken (or, with sound off, shown long enough to read).
+      void Promise.all([say(text), new Promise((res) => setTimeout(res, hintDwellMs(text)))]).then(() => {
+        if (learnToken.current === token) setLearning((l) => (l ? { ...l, ready: true } : l));
+      });
       return;
     }
-    if (r.complete === false) { chime("tap"); speakAndShow(pick(activity.feedback.correct, feedbackCount.current++)); return; }
+    if (r.complete === false) { chime("tap"); const line = stepPraise(); setMessage(line); void say(line); return; }
     chime("correct");
     let outcome = roundOutcome({ openEnded: r.kind === "open", wrongAttempts: wrong, hintLevel, answerShown: false });
     if (r.support === "tapped" && outcome === "independent") outcome = "supported";
     setRoundDone({ outcome });
-    speakAndShow(r.message ?? pick(activity.feedback.correct, roundIdx));
-  }, [roundDone, wrong, hintLevel, chime, speakAndShow, activity.feedback, roundIdx]);
+    const line = r.kind === "open" ? (r.message ?? praise(category)) : r.message ? `${praise(category)} ${r.message}` : praise(category);
+    setMessage(line); void say(line);
+  }, [roundDone, learning, wrong, hintLevel, hints, explain, chime, say, category]);
+
+  const acknowledge = () => { if (learning?.ready) { learnToken.current++; setLearning(null); setMessage(null); } };
 
   const askHint = () => {
-    if (roundDone) return;
+    if (roundDone || learning) return;
     const next = nextHintLevel(hintLevel);
-    setHintLevel(next); setOfferHint(false);
-    if (next >= 4 || shouldShowAnswer(wrong, next)) {
-      setReveal(true); setRoundDone({ outcome: "shown" }); speakAndShow("Let's do this one together. Look!");
-    } else speakAndShow(hintText(hints, next) ?? "");
+    setHintLevel(next);
+    const text = hintText(hints, next, explain) ?? "";
+    setMessage(text); void say(text);
   };
 
   const record = () => {
-    if (!roundDone) return;
+    if (!roundDone || isPage) return; // story pages are listening, not evidence
     observations.current.push({
       activityId: activity.id, activityVersion: activity.version, roundId: round.id, objectiveId: activity.objectiveIds[0],
-      outcome: roundDone.outcome, hintsUsed: hintLevel, exampleShown: reveal || hintLevel >= 4, attempts, optionCount: optionCountOf(activity, roundIdx), at: new Date().toISOString(),
+      outcome: roundDone.outcome, hintsUsed: hintLevel, exampleShown: reveal || hintLevel >= 3, attempts, optionCount: optionCountOf(activity, roundIdx), at: new Date().toISOString(),
     });
   };
   const next = async () => {
     if (!roundDone) return;
     record();
-    if (isLast) { await finish(true); chime("done"); setStage("done"); void say(pick(activity.feedback.complete, 0)); }
-    else { setRoundIdx((i) => i + 1); resetRound(); }
-  };
-  const skip = async () => {
-    // Skipping records nothing for this round: it is neither success nor failure.
-    if (isLast) { await finish(observations.current.length >= activity.completion.minRoundsCompleted); setStage("done"); void say(pick(activity.feedback.complete, 1)); }
+    if (isLast) { const line = completePraise(category); setDoneLine(line); await finish(true); chime("done"); setStage("done"); void say(line); }
     else { setRoundIdx((i) => i + 1); resetRound(); }
   };
   const leave = async () => { stopSpeaking(); await finish(false); router.push(backHref); };
 
-  const replay = () => void say(stage === "intro" ? activity.audioInstructions : roundPrompt);
+  const replay = () => void say(stage === "intro" ? activity.audioInstructions : learning ? learning.text : spoken);
   const playAgain = () => { recorded.current = false; observations.current = []; startedAt.current = Date.now(); setSeed(Math.random().toString(36).slice(2, 8)); setRoundIdx(0); resetRound(); setStage("play"); };
 
   const recs = useMemo(() => (stage === "done" ? app.recommendations().filter((r) => r.activity.id !== activity.id).slice(0, 1) : []), [stage]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -146,7 +166,7 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
     return (
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="mx-auto flex max-w-xl flex-1 flex-col items-center justify-center gap-6 text-center" data-testid="complete">
         <Character species={character.species} size={200} mood="cheer" speaking label={character.name} />
-        <h2 className="text-4xl font-extrabold">{pick(activity.feedback.complete, 0)}</h2>
+        <h2 className="text-4xl font-extrabold">{doneLine}</h2>
         <p aria-hidden className="text-5xl">🌟🌈🌟</p>
         {mission && <p className="rounded-2xl bg-white px-5 py-3 text-lg font-semibold shadow-clay">🏠 Try this with a grown-up: {mission}</p>}
         <div className="flex flex-wrap justify-center gap-4">
@@ -168,7 +188,6 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
         </div>
         <div className="flex gap-2">
           <BigButton variant="soft" onClick={() => setPaused(true)} label="Pause">Pause</BigButton>
-          <BigButton variant="soft" onClick={skip} label="Skip this one">⏭ Skip</BigButton>
         </div>
       </div>
 
@@ -180,7 +199,7 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
 
       <div className="flex flex-1 flex-col justify-center">
       <EngineBoundary backHref={backHref}>
-        <EngineView key={`${seed}-${roundIdx}`} activity={activity} roundIndex={roundIdx} seed={seed} hintLevel={hintLevel} reveal={reveal} locked={!!roundDone} onAttempt={onAttempt} say={(t: string) => void say(t)} />
+        <EngineView key={`${seed}-${roundIdx}`} activity={activity} roundIndex={roundIdx} seed={seed} hintLevel={hintLevel} reveal={reveal} locked={!!roundDone || !!learning} onAttempt={onAttempt} say={(t: string) => void say(t)} />
       </EngineBoundary>
       </div>
 
@@ -193,12 +212,17 @@ export function ActivityRunner({ activity, backHref }: { activity: Activity; bac
             </motion.p>
           )}
         </AnimatePresence>
-        {!roundDone && offerHint && <p className="text-lg font-bold text-ink-soft">Would you like a little hint?</p>}
+        {learning && (
+          <div role="status" data-testid="learn-panel" className="flex w-full max-w-xl flex-col items-center gap-3 rounded-card border-2 border-sun bg-amber-50 p-4 text-center shadow-clay">
+            <p className="text-xl font-bold"><span aria-hidden>💡 </span>{learning.text}</p>
+            <BigButton id="got-it" size="lg" disabled={!learning.ready} onClick={acknowledge}>{learning.ready ? "👍 Got it, let's try again" : "👂 Listen…"}</BigButton>
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-3">
-          {!roundDone && <BigButton variant={offerHint ? "primary" : "soft"} onClick={askHint} label="Show a hint">💡 Hint</BigButton>}
-          {roundDone && <BigButton size="lg" id="continue" onClick={next}>{isLast ? "🎉 All done" : "Next ➡"}</BigButton>}
+          {!roundDone && !learning && !isPage && <BigButton variant="soft" onClick={askHint} label="Show a hint">💡 Hint</BigButton>}
+          {roundDone && <BigButton size="lg" id="continue" onClick={next}>{isLast ? "🎉 All done" : nextIsQuestion ? "Now some questions ➡" : "Next ➡"}</BigButton>}
         </div>
-        {hintLevel > 0 && !roundDone && <p className="text-center text-base font-semibold text-ink-soft">{hintText(hints, hintLevel)}</p>}
+        {hintLevel > 0 && !roundDone && !learning && <p className="text-center text-base font-semibold text-ink-soft">{hintText(hints, hintLevel, explain)}</p>}
       </div>
 
       {breakNote && (

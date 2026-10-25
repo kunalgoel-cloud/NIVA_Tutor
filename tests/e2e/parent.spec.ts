@@ -108,6 +108,7 @@ test.describe("parent area", () => {
     await page.getByLabel("Limit play time").check();
     await page.getByLabel("Play time before resting").selectOption("10");
     await page.getByLabel("Then the app rests for").selectOption("1");
+    await expect(page.getByTestId("screen-status")).toContainText("Played 0 of 10 minutes");
     await page.goto("/worlds");
     await expect(page.getByRole("link", { name: /Number Kingdom/ })).toBeVisible();
     await waitForPlayTimer(page);

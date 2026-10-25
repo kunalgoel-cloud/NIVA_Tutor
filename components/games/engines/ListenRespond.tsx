@@ -84,8 +84,8 @@ export default function ListenRespond({ round, activity, locked, onAttempt, say 
             {round.quickReplies.map((q) => (
               <button key={q.id} type="button" disabled={busy} onClick={() => send(q.say, false)} aria-label={q.say}
                 className="tap flex flex-col items-center gap-1 rounded-card border-2 border-line bg-white px-3 py-4 shadow-clay active:scale-95 disabled:opacity-60">
-                <span aria-hidden className="text-5xl">{q.visual}</span>
-                <span className="text-center text-base font-bold">{q.say}</span>
+                {activity.presentation !== "words" && <span aria-hidden className="text-5xl">{q.visual}</span>}
+                <span className={`text-center font-bold ${activity.presentation === "words" ? "text-xl" : "text-base"}`}>{q.say}</span>
               </button>
             ))}
           </div>

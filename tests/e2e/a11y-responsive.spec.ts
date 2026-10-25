@@ -34,7 +34,7 @@ for (const vp of [{ name: "iPad portrait", width: 820, height: 1180 }, { name: "
 
     test("every engine layout fits the screen", async ({ page }) => {
       await startDemo(page);
-      for (const id of ["feed-the-dinosaur", "match-the-pairs", "sort-by-size", "build-a-number-train", "find-the-odd-one-out", "meet-the-friendly-alien", "count-to-ten-parade"]) {
+      for (const id of ["feed-the-dinosaur", "match-the-pairs", "sort-by-size", "build-a-number-train", "find-the-odd-one-out", "meet-the-friendly-alien", "count-to-ten-parade", "help-the-mouse-find-the-cheese", "rocket-to-the-planet", "the-castle-maze", "story-pip-and-the-red-balloon", "kind-words", "find-the-letters-a-to-f", "match-capital-and-small-a-b-c-d-e-f"]) {
         await page.goto(`/play/${id}`);
         await page.locator("#start-activity").click();
         await page.waitForTimeout(150);
@@ -85,7 +85,9 @@ test("feedback never relies on colour alone: tries and successes carry symbols",
   await page.goto("/play/find-the-odd-one-out");
   await page.locator("#start-activity").click();
   await page.getByRole("button", { name: "apple" }).click();
-  await expect(page.getByText("🤔").first()).toBeVisible();
+  await expect(page.getByTestId("learn-panel").getByText("💡")).toBeVisible(); // a hint panel with a symbol, not just a colour
+  await expect(page.locator("#got-it")).toBeEnabled({ timeout: 15_000 });
+  await page.locator("#got-it").click();
   await page.getByRole("button", { name: "car" }).click();
   await expect(page.getByText("✓").first()).toBeVisible();
 });

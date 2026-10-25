@@ -22,6 +22,16 @@ export const T = (rid: string, prompt: string, opts: string[], correct: number[]
   openReply: o.openReply ? Object.fromEntries(o.openReply.map((r, i) => [id(i), r])) : undefined,
 });
 
+/** Maze round. grid rows use '#' wall, '.' path, 'S' start, 'G' goal. */
+export const MZ = (rid: string, prompt: string, grid: string[], mover: string, goal: string, hints: string[] = [
+  "Tap the square next to you, or use the arrow buttons.", "The dark squares are walls. Follow the light path.", "Come to a dead end? Step back and try another way.",
+]) => ({ id: rid, prompt, grid, mover, goal, hints });
+
+/** One page of a story: shown and read aloud, and it cannot be left until it has been heard. */
+export const PG = (rid: string, text: string, display?: string) => ({ id: rid, kind: "page" as const, prompt: text, display, hints: [] as string[] });
+/** A question about the story. It needs the right answer before the story goes on. */
+export const SQ = (rid: string, prompt: string, opts: string[], correct: number[], o: TOpts = {}) => ({ ...T(rid, prompt, opts, correct, o), kind: "question" as const });
+
 /** Count round: tap each object, then pick the numeral. */
 export const CNT = (rid: string, prompt: string, visual: string, total: number, choices: number[], hints: string[] = []) =>
   ({ id: rid, mode: "count" as const, prompt, visual, total, choices, hints });
@@ -70,7 +80,7 @@ export const LR = (rid: string, prompt: string, o: LOpts) => ({
 type Meta = {
   id: string; title: string; description: string; world: WorldSlug; domain: DomainSlug; obj: string[];
   band?: AgeBand; difficulty?: 1 | 2 | 3; instructions: string; audio?: string; minutes?: number; character?: string;
-  tags?: string[]; mission?: string; adult?: string; speech?: boolean;
+  tags?: string[]; mission?: string; adult?: string; speech?: boolean; words?: boolean;
   correct?: string[]; encourage?: string[]; complete?: string[]; status?: "draft" | "validated" | "published" | "retired"; review?: "unreviewed" | "reviewed";
 };
 
@@ -93,6 +103,6 @@ export function activity<E extends ActivityInput["engine"]>(m: Meta, engine: E, 
     media: [], completion: { minRoundsCompleted: Math.max(1, Math.min(rounds.length, 2)) },
     frameworkMappings: primaryMappings(m.obj), characterId: m.character ?? "pip", tags: m.tags ?? [],
     adultSupervision: m.adult, realWorldMission: m.mission,
-    status: m.status ?? "published", reviewStatus: m.review ?? "reviewed", version: 1,
+    status: m.status ?? "published", reviewStatus: m.review ?? "reviewed", version: 1, presentation: m.words ? "words" : "pictures",
   } as ActivityInput;
 }

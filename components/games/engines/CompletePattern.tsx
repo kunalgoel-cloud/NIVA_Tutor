@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import type { CompletePatternRound } from "@/lib/games/schema";
 import { evaluateComplete, isValidOrderPrefix } from "@/lib/games/evaluate";
+import { GLOW_FROM_LEVEL } from "@/lib/games/hints";
 import { seededShuffle, shuffleDifferent } from "@/lib/games/shuffle";
 import { Tile } from "../Tile";
 import type { EngineProps } from "../types";
@@ -10,24 +11,25 @@ export default function CompletePattern(props: EngineProps<CompletePatternRound>
   return props.round.mode === "complete" ? <Complete {...props} /> : <Order {...props} />;
 }
 
-function Complete({ round, seed, hintLevel, reveal, locked, onAttempt }: EngineProps<CompletePatternRound>) {
+function Complete({ round, activity, seed, hintLevel, reveal, locked, onAttempt }: EngineProps<CompletePatternRound>) {
   const options = useMemo(() => seededShuffle(round.options, `${seed}:${round.id}`), [round, seed]);
-  const [tried, setTried] = useState<Set<string>>(new Set());
   const [filled, setFilled] = useState<string | null>(null);
   const [shake, setShake] = useState<string | null>(null);
   const revealId = reveal ? round.correctIds[0] : null;
   const shown = filled ?? revealId;
   const slotVisual = shown ? round.options.find((o) => o.id === shown)?.visual : null;
-  const eliminated = hintLevel >= 3 ? options.find((o) => !round.correctIds.includes(o.id) && !tried.has(o.id))?.id : undefined;
+  const glowing = hintLevel >= GLOW_FROM_LEVEL && filled === null;
+  const words = activity.presentation === "words";
 
   const pick = (id: string) => {
     if (locked || reveal) return;
     if (evaluateComplete(round, id)) { setFilled(id); onAttempt({ kind: "correct" }); }
-    else { setTried((t) => new Set(t).add(id)); setShake(id); setTimeout(() => setShake(null), 400); onAttempt({ kind: "incorrect" }); }
+    else { setShake(id); setTimeout(() => setShake(null), 400); onAttempt({ kind: "incorrect" }); }
   };
 
   return (
     <div className="flex flex-col items-center gap-8">
+      {round.display && <div aria-hidden className="whitespace-pre-line text-center text-7xl leading-tight">{round.display}</div>}
       <div className="flex flex-wrap items-center justify-center gap-3" role="img" aria-label={`Pattern: ${round.sequence.map((s) => (s === "?" ? "blank" : s)).join(", ")}`}>
         {round.sequence.map((s, i) =>
           s === "?" ? (
@@ -42,8 +44,8 @@ function Complete({ round, seed, hintLevel, reveal, locked, onAttempt }: EngineP
       <div className={`grid w-full gap-4 ${options.length >= 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
         {options.map((o) => (
           <Tile key={o.id} visual={o.visual} label={o.label} alt={o.alt} size="md"
-            state={filled === o.id || revealId === o.id ? "correct" : tried.has(o.id) ? "tried" : eliminated === o.id ? "dim" : "neutral"}
-            shake={shake === o.id} disabled={locked || reveal || tried.has(o.id) || eliminated === o.id} onClick={() => pick(o.id)} />
+            state={filled === o.id || revealId === o.id ? "correct" : glowing && round.correctIds.includes(o.id) ? "glow" : "neutral"} textOnly={words && !/^[A-Za-z0-9]$/.test(o.visual)}
+            shake={shake === o.id} disabled={locked || reveal} onClick={() => pick(o.id)} />
         ))}
       </div>
     </div>
@@ -55,7 +57,7 @@ function Order({ round, seed, reveal, locked, hintLevel, onAttempt }: EngineProp
   const [placed, setPlaced] = useState<string[]>([]);
   const [shake, setShake] = useState<string | null>(null);
   const finalOrder = reveal ? round.steps.map((s) => s.id) : placed;
-  const nextHint = hintLevel >= 3 ? round.steps.map((s) => s.id).find((id) => !finalOrder.includes(id)) : undefined;
+  const nextHint = hintLevel >= GLOW_FROM_LEVEL ? round.steps.map((s) => s.id).find((id) => !finalOrder.includes(id)) : undefined;
 
   const tap = (id: string) => {
     if (locked || reveal || placed.includes(id)) return;
