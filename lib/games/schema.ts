@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { findCell, MAZE_RE, solveMaze } from "./maze";
 import {
   AgeBandSchema,
   DomainSlugSchema,
@@ -8,7 +9,7 @@ import {
   WorldSlugSchema,
 } from "@/lib/curriculum/schema";
 
-export const ENGINE_TYPES = ["tap-choose", "count-collect", "match-pair", "complete-pattern", "listen-respond"] as const;
+export const ENGINE_TYPES = ["tap-choose", "count-collect", "match-pair", "complete-pattern", "listen-respond", "story-listen", "maze"] as const;
 export const EngineTypeSchema = z.enum(ENGINE_TYPES);
 export type EngineType = z.infer<typeof EngineTypeSchema>;
 
@@ -30,8 +31,7 @@ const OptionSchema = z.object({
 export type ChoiceOption = z.infer<typeof OptionSchema>;
 
 // ---- 1. Tap and Choose -------------------------------------------------------
-export const TapChooseRoundSchema = z
-  .object({
+const TapChooseBase = z.object({
     id: RoundId,
     prompt: z.string().min(1).max(320),
     display: Visual.optional(), // big picture shown above the options
@@ -44,14 +44,15 @@ export const TapChooseRoundSchema = z
     hints: Hints.default([]),
     explain: z.string().max(200).optional(), // shown after success
     openReply: z.record(z.string(), z.string().max(200)).optional(), // per-option reflections for open-ended rounds
-  })
-  .superRefine((r, ctx) => {
-    const ids = new Set(r.options.map((o) => o.id));
-    if (ids.size !== r.options.length) ctx.addIssue({ code: "custom", message: "duplicate option ids" });
-    for (const id of [...r.correctIds, ...r.acceptableIds])
-      if (!ids.has(id)) ctx.addIssue({ code: "custom", message: `answer id "${id}" is not an option` });
-    if (!r.openEnded && r.correctIds.length === 0) ctx.addIssue({ code: "custom", message: "closed round needs correctIds" });
   });
+const checkTapChoose = (r: z.infer<typeof TapChooseBase>, ctx: z.RefinementCtx) => {
+  const ids = new Set(r.options.map((o) => o.id));
+  if (ids.size !== r.options.length) ctx.addIssue({ code: "custom", message: "duplicate option ids" });
+  for (const id of [...r.correctIds, ...r.acceptableIds])
+    if (!ids.has(id)) ctx.addIssue({ code: "custom", message: `answer id "${id}" is not an option` });
+  if (!r.openEnded && r.correctIds.length === 0) ctx.addIssue({ code: "custom", message: "closed round needs correctIds" });
+};
+export const TapChooseRoundSchema = TapChooseBase.superRefine(checkTapChoose);
 export type TapChooseRound = z.infer<typeof TapChooseRoundSchema>;
 
 // ---- 2. Count and Collect ----------------------------------------------------
@@ -107,6 +108,7 @@ export const CompletePatternRoundSchema = z
     id: RoundId,
     mode: z.enum(["complete", "order"]),
     prompt: z.string().min(1).max(160),
+    display: Visual.optional(), // big picture shown above the pattern (for example the thing being spelled)
     sequence: z.array(Visual).max(10).default([]), // complete: use "?" for the blank
     options: z.array(OptionSchema).max(5).default([]),
     correctIds: z.array(z.string()).default([]),
@@ -161,6 +163,41 @@ export const ListenRespondRoundSchema = z
   });
 export type ListenRespondRound = z.infer<typeof ListenRespondRoundSchema>;
 
+// ---- 6. Story and Questions (listen to a story page by page, then answer questions) --------
+export const StoryPageRoundSchema = z.object({
+  id: RoundId,
+  kind: z.literal("page"),
+  prompt: z.string().min(1).max(420), // the page text: shown and read aloud
+  display: Visual.optional(), // picture for this page
+  hints: Hints.default([]),
+});
+export type StoryPageRound = z.infer<typeof StoryPageRoundSchema>;
+export const StoryQuestionRoundSchema = TapChooseBase.extend({ kind: z.literal("question") }).superRefine((r, ctx) => {
+  checkTapChoose(r, ctx);
+  if (r.openEnded) ctx.addIssue({ code: "custom", message: "story questions need a right answer" });
+});
+export type StoryQuestionRound = z.infer<typeof StoryQuestionRoundSchema>;
+export const StoryRoundSchema = z.union([StoryPageRoundSchema, StoryQuestionRoundSchema]);
+export type StoryRound = z.infer<typeof StoryRoundSchema>;
+
+// ---- 7. Maze (find the way from start to goal) --------------------------------------------
+export const MazeRoundSchema = z
+  .object({
+    id: RoundId,
+    prompt: z.string().min(1).max(200),
+    grid: z.array(z.string().regex(MAZE_RE)).min(4).max(13), // '#' wall, '.' path, 'S' start, 'G' goal
+    mover: Visual, // who is walking
+    goal: Visual, // where they want to get to
+    hints: Hints.default([]),
+  })
+  .superRefine((r, ctx) => {
+    if (r.grid.some((row) => row.length !== r.grid[0].length)) ctx.addIssue({ code: "custom", message: "maze rows must be the same length" });
+    const count = (ch: string) => r.grid.join("").split(ch).length - 1;
+    if (count("S") !== 1 || count("G") !== 1) ctx.addIssue({ code: "custom", message: "maze needs exactly one S and one G" });
+    else if (!findCell(r.grid, "S") || !solveMaze(r.grid)) ctx.addIssue({ code: "custom", message: "maze has no way from S to G" });
+  });
+export type MazeRound = z.infer<typeof MazeRoundSchema>;
+
 // ---- Activity ---------------------------------------------------------------
 const base = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
@@ -194,10 +231,12 @@ const base = z.object({
   status: PublicationStatusSchema,
   reviewStatus: ReviewStatusSchema,
   version: z.number().int().min(1),
+  /** "words": choices are shown as written words (read aloud) instead of picture symbols, for ideas such as kind or happy. */
+  presentation: z.enum(["pictures", "words"]).default("pictures"),
 });
 
-const withRounds = <E extends string, R extends z.ZodType>(engine: E, round: R) =>
-  base.extend({ engine: z.literal(engine), rounds: z.array(round).min(1).max(6) });
+const withRounds = <E extends string, R extends z.ZodType>(engine: E, round: R, max = 6, min = 1) =>
+  base.extend({ engine: z.literal(engine), rounds: z.array(round).min(min).max(max) });
 
 export const ActivitySchema = z.discriminatedUnion("engine", [
   withRounds("tap-choose", TapChooseRoundSchema),
@@ -205,6 +244,8 @@ export const ActivitySchema = z.discriminatedUnion("engine", [
   withRounds("match-pair", MatchPairRoundSchema),
   withRounds("complete-pattern", CompletePatternRoundSchema),
   withRounds("listen-respond", ListenRespondRoundSchema),
+  withRounds("story-listen", StoryRoundSchema, 16, 3),
+  withRounds("maze", MazeRoundSchema),
 ]);
 export type Activity = z.infer<typeof ActivitySchema>;
 export type ActivityInput = z.input<typeof ActivitySchema>;

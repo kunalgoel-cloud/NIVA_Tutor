@@ -9,9 +9,12 @@ import TapChoose from "@/components/games/engines/TapChoose";
 import CountCollect from "@/components/games/engines/CountCollect";
 import MatchPair from "@/components/games/engines/MatchPair";
 import CompletePattern from "@/components/games/engines/CompletePattern";
+import StoryListen from "@/components/games/engines/StoryListen";
+import Maze from "@/components/games/engines/Maze";
+import { findCell, solveMaze } from "@/lib/games/maze";
 import { localRespond } from "@/lib/ai/local";
 import { isChildVisible } from "@/lib/validation/publication";
-import type { Activity, CompletePatternRound, CountCollectRound, ListenRespondRound, MatchPairRound, TapChooseRound } from "@/lib/games/schema";
+import type { Activity, CompletePatternRound, CountCollectRound, ListenRespondRound, MatchPairRound, MazeRound, StoryRound, TapChooseRound } from "@/lib/games/schema";
 import type { AttemptReport } from "@/components/games/types";
 
 afterEach(cleanup);
@@ -55,6 +58,25 @@ function playRound(a: Activity, i: number): AttemptReport[] {
       render(<CompletePattern {...base} round={r} />);
       if (r.mode === "complete") click(r.options.find((o) => o.id === r.correctIds[0])!.alt);
       else for (const s of r.steps) click(s.alt);
+      break;
+    }
+    case "story-listen": {
+      const r = a.rounds[i] as StoryRound;
+      render(<StoryListen {...base} round={r} />);
+      if (r.kind === "question") click(r.options.find((o) => r.correctIds.includes(o.id))!.alt);
+      else reports.push({ kind: "correct" }); // a page is "completed" by being heard; the runner enforces that
+      break;
+    }
+    case "maze": {
+      const r = a.rounds[i] as MazeRound;
+      render(<Maze {...base} round={r} />);
+      const path = solveMaze(r.grid)!;
+      const names = ["Up", "Down", "Left", "Right"];
+      for (let k = 1; k < path.length; k++) {
+        const dr = path[k].r - path[k - 1].r, dc = path[k].c - path[k - 1].c;
+        fireEvent.click(document.querySelector(`[aria-label="${names[dr === -1 ? 0 : dr === 1 ? 1 : dc === -1 ? 2 : 3]}"]`)!); // direct lookup: large mazes have many buttons
+      }
+      expect(findCell(r.grid, "G")).toEqual(path.at(-1));
       break;
     }
     case "listen-respond": break; // conversation rounds are exercised below without the UI shell

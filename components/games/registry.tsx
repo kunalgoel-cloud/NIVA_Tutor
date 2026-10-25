@@ -12,6 +12,8 @@ const CountCollect = dynamic(() => import("./engines/CountCollect"));
 const MatchPair = dynamic(() => import("./engines/MatchPair"));
 const CompletePattern = dynamic(() => import("./engines/CompletePattern"));
 const ListenRespond = dynamic(() => import("./engines/ListenRespond"));
+const StoryListen = dynamic(() => import("./engines/StoryListen"));
+const Maze = dynamic(() => import("./engines/Maze"));
 
 export type EngineViewProps = {
   activity: Activity; roundIndex: number; seed: string; hintLevel: HintLevel; reveal: boolean; locked: boolean;
@@ -26,5 +28,7 @@ export function EngineView({ activity, roundIndex, ...rest }: EngineViewProps) {
     case "match-pair": return <MatchPair {...common} round={activity.rounds[roundIndex]} />;
     case "complete-pattern": return <CompletePattern {...common} round={activity.rounds[roundIndex]} />;
     case "listen-respond": return <ListenRespond {...common} round={activity.rounds[roundIndex]} />;
+    case "story-listen": return <StoryListen {...common} round={activity.rounds[roundIndex]} />;
+    case "maze": return <Maze {...common} round={activity.rounds[roundIndex]} />;
   }
 }

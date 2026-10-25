@@ -1,13 +1,12 @@
-// Graduated hints: never reveal the answer straight after the first mistake.
+// Graduated hints. A wrong answer ALWAYS leads to a hint the child has to listen to; the choices then open again.
 //   level 0  nothing
 //   level 1  gentle nudge (hints[0])
 //   level 2  stronger clue (hints[1])
-//   level 3  narrow it down (engine removes or highlights something)
-//   level 4  "let's try together": the answer is shown (counts as an example)
-export type HintLevel = 0 | 1 | 2 | 3 | 4;
-export const MAX_HINT_LEVEL: HintLevel = 4;
-export const WRONG_ATTEMPTS_BEFORE_OFFER = 1;
-export const WRONG_ATTEMPTS_BEFORE_SHOWING = 3;
+//   level 3  "let's find it together": the right choice glows. The child still has to pick it to move on.
+// No level ever removes choices or moves the child on without the right answer.
+export type HintLevel = 0 | 1 | 2 | 3;
+export const MAX_HINT_LEVEL: HintLevel = 3;
+export const GLOW_FROM_LEVEL: HintLevel = 3;
 
 const GENERIC = [
   "Take a good look. What do you notice?",
@@ -18,33 +17,29 @@ export function nextHintLevel(level: HintLevel): HintLevel {
   return Math.min(MAX_HINT_LEVEL, level + 1) as HintLevel;
 }
 
-export function hintText(hints: string[], level: HintLevel): string | null {
+export function hintText(hints: string[], level: HintLevel, explain?: string): string | null {
   if (level === 0) return null;
   if (level === 1) return hints[0] ?? GENERIC[0];
-  if (level === 2) return hints[1] ?? hints[0] ?? GENERIC[1];
-  if (level === 3) return "Let's make it a little easier.";
-  return "Let's do this one together.";
-}
-
-export function shouldOfferHint(wrongAttempts: number): boolean {
-  return wrongAttempts >= WRONG_ATTEMPTS_BEFORE_OFFER;
-}
-
-/** After this many wrong tries the engine shows the answer kindly and moves on. */
-export function shouldShowAnswer(wrongAttempts: number, level: HintLevel): boolean {
-  return level >= MAX_HINT_LEVEL || wrongAttempts >= WRONG_ATTEMPTS_BEFORE_SHOWING + 1;
+  if (level === 2) return hints[1] ?? explain ?? hints[0] ?? GENERIC[1];
+  return "Look for the one that is glowing. Tap it.";
 }
 
 export type RoundOutcome = "independent" | "supported" | "shown" | "open-ended";
 export type Assistance = "none" | "hint" | "example";
 
+/** The glow gives the answer away, so a round finished with it counts as an example, not as the child's own work. */
 export function assistanceLevel(hintLevel: HintLevel, answerShown: boolean): Assistance {
-  if (answerShown || hintLevel >= 4) return "example";
+  if (answerShown || hintLevel >= GLOW_FROM_LEVEL) return "example";
   return hintLevel > 0 ? "hint" : "none";
 }
 
 export function roundOutcome(args: { openEnded?: boolean; wrongAttempts: number; hintLevel: HintLevel; answerShown: boolean }): RoundOutcome {
   if (args.openEnded) return "open-ended";
-  if (args.answerShown) return "shown";
+  if (args.answerShown || args.hintLevel >= GLOW_FROM_LEVEL) return "shown";
   return args.wrongAttempts === 0 && args.hintLevel === 0 ? "independent" : "supported";
+}
+
+/** Words to read when a hint is spoken: long hints take longer, and a muted device still pauses long enough to read. */
+export function hintDwellMs(text: string): number {
+  return Math.min(9000, Math.max(2500, 1800 + text.length * 55));
 }

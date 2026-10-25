@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import type { CountCollectRound } from "@/lib/games/schema";
 import { evaluateCollect, evaluateCountAnswer } from "@/lib/games/evaluate";
+import { GLOW_FROM_LEVEL } from "@/lib/games/hints";
 import { seededShuffle } from "@/lib/games/shuffle";
 import { BigButton } from "@/components/ui/Button";
 import type { EngineProps } from "../types";
@@ -15,7 +16,6 @@ export default function CountCollect(props: EngineProps<CountCollectRound>) {
 
 function Count({ round, seed, hintLevel, reveal, locked, onAttempt, say }: EngineProps<CountCollectRound>) {
   const [counted, setCounted] = useState<number[]>([]);
-  const [tried, setTried] = useState<Set<number>>(new Set());
   const [chosen, setChosen] = useState<number | null>(null);
   const [shake, setShake] = useState<number | null>(null);
   const choices = useMemo(() => seededShuffle(round.choices ?? [], `${seed}:${round.id}`), [round, seed]);
@@ -33,7 +33,7 @@ function Count({ round, seed, hintLevel, reveal, locked, onAttempt, say }: Engin
   const answer = (n: number) => {
     if (locked || reveal) return;
     if (evaluateCountAnswer(round, n) === "correct") { setChosen(n); onAttempt({ kind: "correct" }); }
-    else { setTried((t) => new Set(t).add(n)); setShake(n); setTimeout(() => setShake(null), 400); onAttempt({ kind: "incorrect" }); }
+    else { setShake(n); setTimeout(() => setShake(null), 400); onAttempt({ kind: "incorrect" }); }
   };
 
   return (
@@ -41,7 +41,7 @@ function Count({ round, seed, hintLevel, reveal, locked, onAttempt, say }: Engin
       <div className="flex flex-wrap justify-center gap-3" role="group" aria-label={`${round.total} things to count. Tap each one.`}>
         {items.map((i) => {
           const idx = countedShown.indexOf(i);
-          const hinted = hintLevel >= 3 && nextToCount === i && !reveal;
+          const hinted = hintLevel >= GLOW_FROM_LEVEL && nextToCount === i && !reveal;
           return (
             <motion.button key={i} type="button" onClick={() => tapItem(i)} whileTap={{ scale: 0.9 }} disabled={locked || reveal}
               aria-label={idx >= 0 ? `Counted ${idx + 1}` : "Not counted yet"}
@@ -54,11 +54,10 @@ function Count({ round, seed, hintLevel, reveal, locked, onAttempt, say }: Engin
       </div>
       <div className="flex flex-wrap justify-center gap-4" role="group" aria-label="How many? Choose a number">
         {choices.map((n) => (
-          <button key={n} type="button" onClick={() => answer(n)} disabled={locked || reveal || tried.has(n)} aria-label={String(n)}
-            className={`tap relative grid size-24 place-items-center rounded-full border-2 bg-white text-5xl font-extrabold shadow-clay ${chosen === n || (reveal && n === round.total) ? "ring-4 ring-good bg-emerald-50" : "border-line"} ${tried.has(n) ? "opacity-50 border-dashed" : ""} ${shake === n ? "anim-shake" : ""}`}>
+          <button key={n} type="button" onClick={() => answer(n)} disabled={locked || reveal} aria-label={String(n)}
+            className={`tap relative grid size-24 place-items-center rounded-full border-2 bg-white text-5xl font-extrabold shadow-clay ${chosen === n || (reveal && n === round.total) ? "ring-4 ring-good bg-emerald-50" : "border-line"} ${hintLevel >= GLOW_FROM_LEVEL && n === round.total && chosen === null ? "ring-4 ring-[var(--w-deep)] bg-amber-50 anim-bob" : ""} ${shake === n ? "anim-shake" : ""}`}>
             {n}
             {(chosen === n || (reveal && n === round.total)) && <span aria-hidden className="absolute -right-2 -top-2 grid size-8 place-items-center rounded-full bg-good text-lg font-black text-white">✓</span>}
-            {tried.has(n) && <span aria-hidden className="absolute -right-2 -top-2 grid size-8 place-items-center rounded-full bg-sun text-lg">🤔</span>}
           </button>
         ))}
       </div>
@@ -101,7 +100,7 @@ function Collect({ round, hintLevel, reveal, locked, onAttempt, say }: EnginePro
             {Array.from({ length: givenShown }, (_, i) => (
               <button key={i} type="button" onClick={takeBack} aria-label="Take one back" disabled={locked || reveal} className="tap grid size-16 place-items-center rounded-2xl bg-white text-4xl shadow-clay"><span aria-hidden>{round.visual}</span></button>
             ))}
-            {hintLevel >= 3 && givenShown < target && Array.from({ length: target - givenShown }, (_, i) => (
+            {hintLevel >= GLOW_FROM_LEVEL && givenShown < target && Array.from({ length: target - givenShown }, (_, i) => (
               <span key={`slot${i}`} aria-hidden className="grid size-16 place-items-center rounded-2xl border-2 border-dashed border-[var(--w-deep)] text-3xl opacity-60">＋</span>
             ))}
           </div>

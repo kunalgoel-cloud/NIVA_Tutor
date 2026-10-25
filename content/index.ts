@@ -6,6 +6,10 @@ import { OBJECTIVES } from "./objectives";
 import { NUMBER_ACTIVITIES } from "./activities/number";
 import { CONVERSATION_ACTIVITIES } from "./activities/conversation";
 import { EXTRA_NUMBER_ACTIVITIES, EXTRA_PUZZLE_ACTIVITIES, EXTRA_CREATIVITY_ACTIVITIES } from "./activities/extra";
+import { STORY_ACTIVITIES } from "./activities/stories";
+import { MAZE_ACTIVITIES } from "./activities/mazes";
+import { ALPHABET_ACTIVITIES } from "./activities/alphabet";
+import { LEVEL_PUZZLE_ACTIVITIES } from "./activities/puzzles-levels";
 import { PUZZLE_ACTIVITIES, WONDER_ACTIVITIES, CREATIVITY_ACTIVITIES } from "./activities/worlds";
 
 export { DOMAINS, FRAMEWORKS, OBJECTIVES };
@@ -15,7 +19,7 @@ export { OFFLINE_MISSIONS } from "./offline-missions";
 
 export const RAW_ACTIVITIES: unknown[] = [
   ...NUMBER_ACTIVITIES, ...CONVERSATION_ACTIVITIES, ...PUZZLE_ACTIVITIES, ...WONDER_ACTIVITIES, ...CREATIVITY_ACTIVITIES,
-  ...EXTRA_NUMBER_ACTIVITIES, ...EXTRA_PUZZLE_ACTIVITIES, ...EXTRA_CREATIVITY_ACTIVITIES,
+  ...EXTRA_NUMBER_ACTIVITIES, ...EXTRA_PUZZLE_ACTIVITIES, ...EXTRA_CREATIVITY_ACTIVITIES, ...STORY_ACTIVITIES, ...MAZE_ACTIVITIES, ...ALPHABET_ACTIVITIES, ...LEVEL_PUZZLE_ACTIVITIES,
 ];
 
 /** Activities that parse. Broken ones are dropped here and reported by validation, never rendered. */

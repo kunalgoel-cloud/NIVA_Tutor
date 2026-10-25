@@ -4,7 +4,7 @@
 app/            Next.js pages. Child: / , /worlds, /worlds/[slug], /play/[id], /today, /explore
                 Parent (behind the gate): /parent, /parent/{setup,progress,history,library,settings,data}
                 API: /api/conversation (AI, server-only secrets), /api/status (config status, no secrets)
-components/     UI only. games/ (ActivityRunner + 5 engines), parent/, layout/, characters/, worlds/, ui/
+components/     UI only. games/ (ActivityRunner + 7 engines), parent/, layout/, characters/, worlds/, ui/
 content/        The curriculum as typed data: domains, objectives, frameworks, activities/, characters, worlds
 lib/            Business logic with no UI: games/ curriculum/ learning/ recommendations/ ai/ speech/
                 database/ privacy/ parent/ validation/

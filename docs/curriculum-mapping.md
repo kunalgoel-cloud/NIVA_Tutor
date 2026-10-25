@@ -31,7 +31,7 @@ The validator refuses "verified" without a date.
 
 ## Developmental bands (flexible, not deadlines)
 Little Explorer 3–4 · Curious Thinker 4–5 · Confident Learner 5–6 · Young Problem Solver 6–7.
-58 objectives exist across all bands; those for ages 4+ are `draft` ("planned") and have no activities yet.
+75 objectives exist across all four bands. Alphabet, story, maze and puzzle objectives for ages 4 to 7 are published and have activities; some other objectives for ages 4+ are still `draft` ("planned").
 
 ## Progression models (per domain, in `content/domains.ts`)
 - **Mathematics:** physical quantities → visual quantities → numerals/order → mental imagery → abstract calculation.

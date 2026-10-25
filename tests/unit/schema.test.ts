@@ -14,7 +14,7 @@ describe("activity schema validation", () => {
     expect(new Set(ACTIVITIES.map((a) => a.world)).size).toBe(5);
     expect(new Set(ACTIVITIES.map((a) => a.domain)).size).toBe(8);
   });
-  it("uses all five engines and none of the planned ones", () => {
+  it("uses every engine and none of the planned ones", () => {
     const used = new Set(ACTIVITIES.map((a) => a.engine));
     for (const e of ENGINE_TYPES) expect(used.has(e)).toBe(true);
     for (const e of PLANNED_ENGINES) expect(used.has(e as never)).toBe(false);

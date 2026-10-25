@@ -125,6 +125,15 @@ export function validateContent(input: ValidationInput): Issue[] {
       if (a.engine === "listen-respond" && a.rounds.length && !(r as { quickReplies: unknown[] }).quickReplies.length) add("error", `${scope}/${r.id}`, "speech round needs tap alternatives");
     }
 
+    // A story needs something to listen to and something that checks it was understood.
+    if (a.engine === "story-listen") {
+      const kinds = (a.rounds as { kind: string }[]).map((r) => r.kind);
+      if (!kinds.includes("page")) add("error", scope, "story has no pages to listen to");
+      if (kinds.filter((k) => k === "question").length < 2) add("error", scope, "story needs at least two questions to check understanding");
+      if (kinds[0] !== "page") add("error", scope, "a story must start with a page, not a question");
+      if (kinds.at(-1) !== "question") add("error", scope, "a story must end with a question, so understanding is checked before it finishes");
+    }
+
     // Safety scan of all strings
     const text = walkStrings(raw).join(" \n ").toLowerCase();
     for (const p of FORBIDDEN_PHRASES) if (text.includes(p)) add("error", scope, `contains forbidden phrase "${p}"`);

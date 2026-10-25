@@ -110,6 +110,7 @@ export function optionCountOf(activity: Activity, roundIndex: number): number {
     case "count-collect": { const c = r as CountCollectRound; return c.mode === "count" ? (c.choices?.length ?? 0) : 0; }
     case "match-pair": { const m = r as MatchPairRound; return m.mode === "pairs" ? Math.max(m.pairs.length - 1, 0) + 1 : m.bins.length; }
     case "complete-pattern": { const p = r as CompletePatternRound; return p.mode === "complete" ? p.options.length : 0; }
+    case "story-listen": { const q = r as { kind?: string; options?: unknown[] }; return q.kind === "question" ? (q.options?.length ?? 0) : 0; }
     default: return 0;
   }
 }
