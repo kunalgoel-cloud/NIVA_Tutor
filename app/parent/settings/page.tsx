@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useApp } from "@/components/AppProvider";
 import { Badge, PBtn, Section } from "@/components/parent/ui";
 import { AGE_BANDS, AGE_BAND_INFO, type AgeBand } from "@/lib/curriculum/schema";
@@ -26,7 +26,11 @@ export default function SettingsPage() {
 
   useEffect(() => { fetch("/api/status").then((r) => r.json()).then(setStatus).catch(() => setStatus(null)); }, []);
 
-  const update = async (next: ParentSettings) => { await saveSettings(next); setSaved(true); setTimeout(() => setSaved(false), 1800); };
+  // Latest settings including a save still in flight, so two quick edits never overwrite each other.
+  const latest = useRef(settings);
+  useEffect(() => { latest.current = settings; }, [settings]);
+
+  const update = async (next: ParentSettings) => { latest.current = next; await saveSettings(next); setSaved(true); setTimeout(() => setSaved(false), 1800); };
 
   return (
     <>
@@ -78,7 +82,7 @@ export default function SettingsPage() {
       <Section title="Screen time" id="screen-time" hint="After the play time is used up, the app rests for a few hours. The count is kept on this device and only runs while a child screen is open.">
         {(() => {
           const st = settings.session.screenTime;
-          const setSt = (patch: Partial<typeof st>) => void update({ ...settings, session: { ...settings.session, screenTime: { ...st, ...patch } } });
+          const setSt = (patch: Partial<typeof st>) => { const cur = latest.current; void update({ ...cur, session: { ...cur.session, screenTime: { ...cur.session.screenTime, ...patch } } }); };
           return (
             <>
               <label className={box}><input type="checkbox" className="size-5" checked={st.enabled} onChange={(e) => setSt({ enabled: e.target.checked })} /> Limit play time</label>
